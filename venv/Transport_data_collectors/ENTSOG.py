@@ -155,8 +155,8 @@ def get_and_send_GCV_data():
         message = "Error preparing message: " + str(e)
     try:
         service = sendmail_mod.init_Connection()
-        sender = 'mkiles81@gmail.com'
-        reciever = 'mkiles81@gmail.com, m.ovsyankin@adm.gazprom.ru'
+        sender = '@gmail.com'
+        reciever = '@gmail.com, .ru'
         subj = "Калорийность за " + str(date1)
         message = sendmail_mod.create_message(sender, reciever, subj, message)
         sendmail_mod.send_message(service, 'me', message)
