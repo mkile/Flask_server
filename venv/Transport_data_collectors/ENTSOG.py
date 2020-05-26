@@ -45,35 +45,39 @@ def get_ENTSOG_vr_data():
     date_mid = (datetime(now.year, now.month, now.day) - timedelta(days=1)).strftime('%Y-%m-%d')
     date_to = (datetime(now.year, now.month, now.day)).strftime('%Y-%m-%d')
     #Allocation Data Recieve
-    stringio.write(add_html_line(f"Getting {indicator_list[0]} data" + str(date_from)))
+    stringio.write('<h3>Протокол обновления данных</h3>')
+    stringio.write('<textarea rows="10" cols="100">')
+    stringio.write(f"Getting {indicator_list[0]} data for {str(date_from)}")
     Aldata = pandas.DataFrame()
     for point in points_list:
         link = link_template % (point, date_from, date_to, indicator_list[0])
-        stringio.write(add_html_link(link))
+        stringio.write(link)
         Aldata = Aldata.append(getandprocessJSONdataENTSOG(link))
     Aldata = Aldata.sort_values('date')
     #GCV Data Recieve
-    stringio.write(add_html_line(f"Getting {indicator_list[1]} data " + str(date_from)))
+    stringio.write(f"Getting {indicator_list[1]} data for {str(date_from)}")
     GCVData = pandas.DataFrame()
     for point in points_list:
         link = link_template % (point, date_from, date_to, indicator_list[1])
-        stringio.write(add_html_link(link))
+        stringio.write(link)
         GCVData = GCVData.append(getandprocessJSONdataENTSOG(link))
     GCVData = GCVData.sort_values('date')
     # Renomination Data Recieve
-    stringio.write(add_html_line(f"Getting {indicator_list[2]} data Drozdowicze " + str(date_from)))
-    link = link_template % (points_list[0], date_from, date_to, indicator_list[2])
-    stringio.write(add_html_link(link))
-    RenData = getandprocessJSONdataENTSOG(link)
+    stringio.write(f"Getting {indicator_list[2]} data for {str(date_from)}")
+    RenData = pandas.DataFrame()
+    for point in points_list:
+        link = link_template % (point, date_from, date_to, indicator_list[2])
+        stringio.write(link)
+        RenData = RenData.append(getandprocessJSONdataENTSOG(link))
     RenData = RenData.sort_values('date')
     #Output collected data separately
+    stringio.write('</textarea>')
     stringio.write("<p><h2>Данные по калорийности</h2>")
     stringio.write(GCVData.to_html(index=False, decimal=','))
     stringio.write("<p><h2>Данные по аллокациям</h2>")
     stringio.write(Aldata.to_html(index=False, decimal=','))
     stringio.write("<p><h2>Данные по реноминациям</h2>")
     stringio.write(RenData.to_html(index=False, decimal=','))
-
     # join tables
     Vdata = pandas.merge(RenData, GCVData, left_on=['date', 'point'], right_on=['date', 'point'], how='outer')
     Vdata = Vdata.fillna(method='ffill')
@@ -84,15 +88,15 @@ def get_ENTSOG_vr_data():
     #sort and convert date to text
     Vdata = Vdata.sort_values(by='date')
     Vdata['date'] = Vdata['date'].apply(lambda x:  parse(x, ignoretz=True).strftime('%Y-%m-%d'))
-    #clear unnecessary variables
+    # Clear unnecessary variables
     del RenData
     del GCVData
     del Aldata
-    #make date filter
+    # <Make date filter
     filter_d_2 = (datetime(now.year, now.month, now.day) - timedelta(days=2)).strftime('%Y-%m-%d')
     filter_d_1 = (datetime(now.year, now.month, now.day) - timedelta(days=1)).strftime('%Y-%m-%d')
     filter_d = (datetime(now.year, now.month, now.day)).strftime('%Y-%m-%d')
-    #get data
+    # Get data
     Al_d_2 = filter_df(Vdata, filter_d_2, 'Allocation_M3')
     Al_d_1 = filter_df(Vdata, filter_d_1, 'Allocation_M3')
     Ren_d = filter_df(Vdata, filter_d, 'Renomination_M3')
@@ -155,8 +159,8 @@ def get_and_send_GCV_data():
         message = "Error preparing message: " + str(e)
     try:
         service = sendmail_mod.init_Connection()
-        sender = 'mkiles81@gmail.com'
-        reciever = 'mkiles81@gmail.com, m.ovsyankin@adm.gazprom.ru'
+        sender = 'dummy@gmail.com'
+        reciever = 'dummy@gmail.com, dummy@gmail.com'
         subj = "Калорийность за " + str(date1)
         message = sendmail_mod.create_message(sender, reciever, subj, message)
         sendmail_mod.send_message(service, 'me', message)

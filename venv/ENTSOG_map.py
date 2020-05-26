@@ -109,3 +109,6 @@ def plot_ENTSOG_map():
 
     # return json
     return json.dumps(json_item(p, "myplot"))
+
+if __name__ == "__main__":
+    plot_ENTSOG_map()

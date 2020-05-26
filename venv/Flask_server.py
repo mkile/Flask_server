@@ -2,7 +2,7 @@ from flask import Flask, render_template, url_for, copy_current_request_context,
 from flask import redirect, request, session, make_response
 from Transport_data_collectors.FGSZ import get_FGSZ_vr_data
 from Transport_data_collectors.ENTSOG import get_ENTSOG_vr_data
-from ENTSOG import plot_ENTSOG_map
+from ENTSOG_map import plot_ENTSOG_map
 import os
 from time import sleep
 from werkzeug.exceptions import HTTPException
@@ -33,7 +33,7 @@ def login():
     error = None
     sleep(1)
     if request.method == 'POST':
-        if request.form['username'] != 'dlog':
+        if request.form['username'] != default_login:
             error = 'Неверные параметры входа.'
         else:
             session['logged_in'] = True
@@ -120,5 +120,6 @@ app.config['DEBUG'] = True
 
 if __name__ == '__main__':
     #app.run(host='0.0.0.0', threaded=True)
+    default_login = str(open('default_login.txt', 'r').read())
     serve(app, host='0.0.0.0', port=5000)
 
