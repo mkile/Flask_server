@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+
+<html>
+
+<head>
+    <meta charset="utf-8"/>
+    <title>Index</title>
+	<link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='css/main.css') }}">
+</head>
+
+<body>
+	<h1>{{ result_var }}</h1>
+	<p>
+	<a href="/">Вернуться на стартовую страницу></a>
+	<p>
+
+	Возврат через <div id="counter">5</div> секунд
+	<script>
+		setInterval(function() {
+			var div = document.querySelector("#counter");
+			var count = div.textContent * 1 - 1;
+			div.textContent = count;
+			if (count <= 0) {
+				window.location.replace("/");
+			}
+		}, 1000);
+    	</script>
+</body>

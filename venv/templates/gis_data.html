@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  {{ resources|safe }}
+  <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='css/main.css') }}">
+</head>
+<body>
+  <h1> Граф взаимосвязи объектов ENTSOG </h1>
+  <div id="myplot"></div>
+  <script>
+  fetch('/gis_data_plot')
+    .then(function(response) { return response.json(); })
+    .then(function(item) { return Bokeh.embed.embed_item(item); })
+  </script>
+  <script>
+</body>

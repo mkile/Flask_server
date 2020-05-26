@@ -1,0 +1,33 @@
+<!doctype html>
+<title>Dataserver</title>
+<link rel=stylesheet type=text/css href="{{ url_for('static', filename='/css/login.css') }}">
+<div class=page>
+  <div class=metanav>
+  {% if not session.logged_in %}
+    <form action="/login" method="POST">
+        <div class="login">
+        <div class="login-screen">
+        <div class="app-title">
+        <h1>Вход</h1>
+        </div>
+        <div class="login-form">
+        <div class="control-group">
+            <input type="text" class="login-field" value="" placeholder="Имя пользователя" name="username" required>
+            <label class="login-field-icon fui-user" for="login-name"></label>
+        </div>
+        <input type="submit" value="Log in" class="btn btn-primary btn-large btn-block">
+        </div>
+        </div>
+        </div>
+    </form>
+  {% else %}
+      Вы уже вошли.
+      <a href="{{ url_for('.') }}">Перейти на главную страницу</a>
+      <a href="{{ url_for('logout') }}">Выйти.</a>
+  {% endif %}
+  </div>
+  {% for message in get_flashed_messages() %}
+    <div class=flash>{{ message }}</div>
+  {% endfor %}
+  {% block body %}{% endblock %}
+</div>
