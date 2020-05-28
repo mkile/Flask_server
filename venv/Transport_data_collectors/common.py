@@ -1,4 +1,5 @@
 import pandas
+import math
 
 def filter_df(data, filter, field):
     # Filter data by filter and return needed field
@@ -13,6 +14,10 @@ def add_html_line(textstring):
     # Add new html line
     return textstring + '<br>'
 
+def add_table_row(textstring):
+    # Add new html line
+    return '<tr><td>' + textstring + '</td></tr>'
+
 def add_html_link(textstring):
     # Add link in html format
     return '<a href="' + textstring + '">' + textstring + '</a><br>'
@@ -20,3 +25,7 @@ def add_html_link(textstring):
 def turn_date(date):
     # Dirty hack to convert date to necessary format
     return date[8:] + '.' + date[5:7] + '.' + date[:4]
+
+def round_half_up(n, decimals=0):
+    multiplier = 10 ** decimals
+    return math.floor(n*multiplier + 0.5) / multiplier

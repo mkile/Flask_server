@@ -3,7 +3,7 @@ import json
 import datetime
 import pandas
 from tabulate import tabulate
-from Transport_data_collectors.common import filter_df, turn_date
+from Transport_data_collectors.common import filter_df, turn_date, round_half_up
 import io
 
 class Parameter():
@@ -182,18 +182,22 @@ def get_FGSZ_vr_data(start_date=None, end_date=None, output_xls=False):
         stringio.write("<p><h2>Таблица с расчётными данными</h2>")
         stringio.write(virtual_reverse.to_html(index=False, decimal=','))
         if show_final_reverse:
-            Al_d_1_eu = filter_df(virtual_reverse, mid_date, 'Allocation_M3')
-            Al_d_2_eu = filter_df(virtual_reverse, start_date, 'Allocation_M3')
-            Ren_d_eu = filter_df(virtual_reverse, end_date, 'Renomination_M3')
+            Al_d_1_eu = filter_df(virtual_reverse, mid_date, 'date')['Allocation_M3'].sum()
+            Al_d_2_eu = filter_df(virtual_reverse, start_date, 'date')['Allocation_M3'].sum()
+            Ren_d_eu = filter_df(virtual_reverse, end_date, 'date')['Renomination_M3'].sum()
             Al_d_1_ru = Al_d_1_eu / 24 * 21 + Ren_d_eu / 24 * 3
             Al_d_2_ru = Al_d_2_eu / 24 * 21 + Al_d_1_eu / 24 * 3
 
             in_format = 'В формате '
             stringio.write('<p><h1> Данные по реверсу Берегово: </h1>')
-            stringio.write(in_format + '10-10 за {} - {:.3f}<br>'.format(turn_date(mid_date), Al_d_1_ru))
-            stringio.write(in_format + '07-07 за {} - {:.3f}<br>'.format(turn_date(mid_date), Al_d_1_eu))
-            stringio.write(in_format + '10-10 за {} - {:.3f}<br>'.format(turn_date(start_date), Al_d_2_ru))
-            stringio.write(in_format + '07-07 за {} - {:.3f}<br>'.format(turn_date(start_date), Al_d_2_eu))
+            stringio.write(in_format + '10-10 за {} - {:.3f}<br>'.format(turn_date(mid_date),
+                                                                         round_half_up(Al_d_1_ru, 3)))
+            stringio.write(in_format + '07-07 за {} - {:.3f}<br>'.format(turn_date(mid_date),
+                                                                         round_half_up(Al_d_1_eu, 3)))
+            stringio.write(in_format + '10-10 за {} - {:.3f}<br>'.format(turn_date(start_date),
+                                                                         round_half_up(Al_d_2_ru, 3)))
+            stringio.write(in_format + '07-07 за {} - {:.3f}<br>'.format(turn_date(start_date),
+                                                                         round_half_up(Al_d_2_eu, 3)))
 
         return stringio.getvalue()
     else:

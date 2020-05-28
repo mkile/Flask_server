@@ -45,17 +45,20 @@ def plot_ENTSOG_map():
                          'tpMapY',
                          'name']]
     # Create list of interconnection points
-    ips_list = pdagr[['name', 'pointTpMapX', 'pointTpMapY']].drop_duplicates()
+    ips_list = pdagr[['name', 'pointTpMapX', 'pointTpMapY', 'pointKey']].drop_duplicates()
     # Get list of UGS
     UGS_list = ips_list[ips_list['name'].str.contains('UGS')]
+    # Get list of LNG
+    LNG_list = ips_list[ips_list['pointKey'].str.contains('LNG')]
     # Remove UGS from ips_list
     ips_list = ips_list[~ips_list['name'].str.contains('UGS')]
-
+    ips_list = ips_list[~ips_list['pointKey'].str.contains('LNG')]
     # Work with bokeh
 
     balance_zones = ColumnDataSource(pdbz)
     ips = ColumnDataSource(ips_list)
     UGS = ColumnDataSource(UGS_list)
+    LNG = ColumnDataSource(LNG_list)
 
     p = figure()
     p.sizing_mode = 'scale_width'
@@ -113,8 +116,15 @@ def plot_ENTSOG_map():
                    size=8,
                    fill_color='#a240a2',
                    legend_label='ПХГ')
+    # Plot LNG
+    lng_points = p.diamond(x='pointTpMapX',
+                          y='pointTpMapY',
+                          source=LNG,
+                          size=12,
+                          fill_color='#2DDBE7',
+                          legend_label='Терминалы СПГ')
 
-    hover = HoverTool(renderers=[bzp, icp, ugs_points])
+    hover = HoverTool(renderers=[bzp, icp, ugs_points, lng_points])
     hover.tooltips = [
         ('Label', '@name'),
     ]
