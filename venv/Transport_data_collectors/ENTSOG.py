@@ -97,43 +97,57 @@ def get_ENTSOG_vr_data():
     filter_d_1 = (datetime(now.year, now.month, now.day) - timedelta(days=1)).strftime('%Y-%m-%d')
     filter_d = (datetime(now.year, now.month, now.day)).strftime('%Y-%m-%d')
     # Get data
-    Al_d_2 = filter_df(Vdata, filter_d_2, 'Allocation_M3')
-    Al_d_1 = filter_df(Vdata, filter_d_1, 'Allocation_M3')
-    Ren_d = filter_df(Vdata, filter_d, 'Renomination_M3')
+    Al_d_2pd = filter_df(Vdata, filter_d_2, 'date')
+    Al_d_1pd = filter_df(Vdata, filter_d_1, 'date')
+    Ren_dpd = filter_df(Vdata, filter_d, 'date')
+    # Get points list
+    points = Al_d_1pd.append(Al_d_2pd)
+    points = [*set(points.append(Ren_dpd)['point'].to_list())]
+    Al_d_1 = []
+    Al_d_2 = []
+    Ren_d = []
     #check if necessary values is not none and if necessary replace allocation with renomination
-    if isnan(Al_d_2):
-        comment += add_html_line('Аллокация для Д-2 отсутствует, используем реноминацию.')
-        Al_d_2 = filter_df(Vdata, filter_d_2, 'Renomination_M3')
-        if isnan(Al_d_2):
-            comment += add_html_line('Реноминация за Д-2 отсутствует, расчёт не возможен')
-    if isnan(Al_d_1):
-        comment += add_html_line('Аллокация для Д-1 отсутствует, используем реноминацию.')
-        Al_d_1 = filter_df(Vdata, filter_d_1, 'Renomination_M3')
-        if isnan(Al_d_1):
-            comment += add_html_line('Реноминация за Д-1 отсутствует, расчёт не возможен')
+    for point in points:
+        comment += add_html_line(f'Сбор данных для пункта {point}.')
+        Al_d_2_value = filter_df(Al_d_2pd, point, 'point')['Allocation_M3'].sum()
+        Al_d_1_value = filter_df(Al_d_1pd, point, 'point')['Allocation_M3'].sum()
+        Ren_d_value = filter_df(Ren_dpd, point, 'point')['Renomination_M3'].sum()
+        if isnan(Al_d_2_value):
+            comment += add_html_line('Аллокация для Д-2 отсутствует, используем реноминацию.')
+            Al_d_2_value = filter_df(filter_df(Vdata, filter_d_2, 'Renomination_M3'), point, 'point').sum()
+            if isnan(Al_d_2_value):
+                comment += add_html_line('Реноминация за Д-2 отсутствует, расчёт не возможен')
+        if isnan(Al_d_1_value):
+            comment += add_html_line('Аллокация для Д-1 отсутствует, используем реноминацию.')
+            Al_d_1_value = filter_df(filter_df(Vdata, filter_d_1, 'Renomination_M3'), point, 'point')
+            if isnan(Al_d_1_value):
+                comment += add_html_line('Реноминация за Д-1 отсутствует, расчёт не возможен')
+                comment += add_html_line(error_msg)
+        if isnan(Ren_d_value):
+            comment += add_html_line('Реноминация для Д отсутствует, расчёт не возможен.')
             comment += add_html_line(error_msg)
-    if isnan(Ren_d):
-        comment += add_html_line('Реноминация для Д отсутствует, расчёт не возможен.')
-        comment += add_html_line(error_msg)
-    if len(list(map(lambda x: x == error_msg, comment))) > 0:
-        stringio.write(add_html_line('Часть данных отсутствует, продолжение не возможно.'))
+        if error_msg in comment:
+            stringio.write(add_html_line('Часть данных отсутствует, продолжение не возможно.'))
+        Al_d_1.append(Al_d_1_value)
+        Al_d_2.append(Al_d_2_value)
+        Ren_d.append(Ren_d_value)
     # Write data table to string buffer
     stringio.write('<h2>Таблица данных для расчёта</h2>')
     stringio.write(Vdata.to_html(index=False, decimal=','))
     # Проверим все ли нужные данные есть
-    new_line = '<br>'
 
     if error_msg in comment:
         stringio.write('Ошибка сбора данных.'+ new_line)
         stringio.write(comment)
     else:
-        Al_d_1_8 = Al_d_1
-        Al_d_1_10 = Al_d_1_8 / 24 * 22 + Ren_d / 12
-        in_format = 'В формате '
-        stringio.write(add_html_line('<p><h1>Данные по виртуальному реверсу через ГИС Дроздовичи:</h1>'))
-        stringio.write(add_html_line(in_format + '07-07 за {} - {:.3f}'.format(turn_date(filter_d_1), Al_d_1_8)))
-        stringio.write(add_html_line(in_format + '10-10 за {} - {:.3f}'.format(turn_date(filter_d_1), Al_d_1_10)))
-        stringio.write(add_html_line(in_format + '10-10 за {} - {:.3f}'.format(turn_date(filter_d_2), Al_d_2)))
+        for index, point in enumerate(points):
+            Al_d_1_8 = Al_d_1[index]
+            Al_d_1_10 = Al_d_1_8 / 24 * 21 + Ren_d[index] / 24 * 3
+            in_for = 'В формате '
+            stringio.write(add_html_line(f'<br><p><h1>Данные по виртуальному реверсу через ГИС {point}:</h1>'))
+            stringio.write(add_html_line(in_for + '07-07 за {} - {:.3f}'.format(turn_date(filter_d_1), Al_d_1_8)))
+            stringio.write(add_html_line(in_for + '10-10 за {} - {:.3f}'.format(turn_date(filter_d_1), Al_d_1_10)))
+            stringio.write(add_html_line(in_for + '10-10 за {} - {:.3f}'.format(turn_date(filter_d_2), Al_d_2[index])))
     return stringio.getvalue()
 
 def get_and_send_GCV_data():

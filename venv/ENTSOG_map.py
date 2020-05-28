@@ -44,13 +44,18 @@ def plot_ENTSOG_map():
                          'tpMapX',
                          'tpMapY',
                          'name']]
-
+    # Create list of interconnection points
     ips_list = pdagr[['name', 'pointTpMapX', 'pointTpMapY']].drop_duplicates()
+    # Get list of UGS
+    UGS_list = ips_list[ips_list['name'].str.contains('UGS')]
+    # Remove UGS from ips_list
+    ips_list = ips_list[~ips_list['name'].str.contains('UGS')]
 
     # Work with bokeh
 
     balance_zones = ColumnDataSource(pdbz)
     ips = ColumnDataSource(ips_list)
+    UGS = ColumnDataSource(UGS_list)
 
     p = figure()
     p.sizing_mode = 'scale_width'
@@ -85,12 +90,13 @@ def plot_ENTSOG_map():
               legend_label='Потоки от балансовых зон')
 
     # Plot Balancing zones
-    bzp = p.circle(x='tpMapX',
-                   y='tpMapY',
-                   source=balance_zones,
-                   size=10,
-                   color='green',
-                   legend_label='Балансовые зоны')
+    bzp = p.circle_x(x='tpMapX',
+                    y='tpMapY',
+                    source=balance_zones,
+                    size=10,
+                    line_color='green',
+                    fill_color='yellow',
+                    legend_label='Балансовые зоны')
 
     # Plot interconnection points
     icp = p.circle(x='pointTpMapX',
@@ -100,7 +106,15 @@ def plot_ENTSOG_map():
                    color='red',
                    legend_label='Интерконнекторы')
 
-    hover = HoverTool(renderers=[bzp, icp])
+    # Plot UGS
+    ugs_points = p.square(x='pointTpMapX',
+                   y='pointTpMapY',
+                   source=UGS,
+                   size=8,
+                   fill_color='#a240a2',
+                   legend_label='ПХГ')
+
+    hover = HoverTool(renderers=[bzp, icp, ugs_points])
     hover.tooltips = [
         ('Label', '@name'),
     ]
