@@ -30,11 +30,29 @@ def plot_ENTSOG_map():
          'toBzKey',
          'toPointKey']]
     pdagr = pdagr.drop_duplicates()
+    # Move duplicating endpoints up 0.01
+    wo_duplicates = pdagr.drop_duplicates(subset=['pointTpMapX', 'pointTpMapY'])
+    duplicates_only = pdagr[~pdagr.apply(tuple, 1).isin(wo_duplicates.apply(tuple, 1))]
+    duplicates_only.sort_values(['pointTpMapX', 'pointTpMapY'])
+    prev_name = ''
+    prev_value_before = 0.0
+    prev_value_after = 0.0
+    # It`s a shame but I couldn`t find a way to vectorise cycle below
+    for index, row in duplicates_only.iterrows():
+        if prev_value_before == row['pointTpMapY']:
+            prev_value_before = row['pointTpMapY']
+            duplicates_only.at[index, 'pointTpMapY'] = prev_value_after + 0.001
+        else:
+            prev_value_before = row['pointTpMapY']
+            duplicates_only.at[index, 'pointTpMapY'] += 0.001
+        prev_value_after = duplicates_only.at[index, 'pointTpMapY']
 
+    pdagr = wo_duplicates.append(duplicates_only)
+    # Create data for lines from BZ
     joined = pdagr.merge(pdbz, left_on='fromBzKey', right_on='bzKey')
     lines_from = joined.dropna(subset=['fromBzKey'])
     lines_from = lines_from.rename(columns={'name_x': 'name'})
-
+    # Create data for lines to BZ
     joined = pdagr.merge(pdbz, left_on='toBzKey', right_on='bzKey')
     lines_to = joined.dropna(subset=['toBzKey'])
     lines_to = lines_to.rename(columns={'name_x': 'name'})
@@ -44,13 +62,14 @@ def plot_ENTSOG_map():
                          'tpMapX',
                          'tpMapY',
                          'name']]
+
     # Create list of interconnection points
     ips_list = pdagr[['name', 'pointTpMapX', 'pointTpMapY', 'pointKey']].drop_duplicates()
     # Get list of UGS
     UGS_list = ips_list[ips_list['name'].str.contains('UGS')]
     # Get list of LNG
     LNG_list = ips_list[ips_list['pointKey'].str.contains('LNG')]
-    # Remove UGS from ips_list
+    # Remove UGS and  LNG from ips_list
     ips_list = ips_list[~ips_list['name'].str.contains('UGS')]
     ips_list = ips_list[~ips_list['pointKey'].str.contains('LNG')]
     # Work with bokeh
