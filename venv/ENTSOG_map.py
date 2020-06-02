@@ -31,23 +31,30 @@ def plot_ENTSOG_map():
          'toPointKey']]
     pdagr = pdagr.drop_duplicates()
     # Move duplicating endpoints up 0.01
-    wo_duplicates = pdagr.drop_duplicates(subset=['pointTpMapX', 'pointTpMapY'])
+    # Need to remove 'normal' points having only entry exit and not ovelapping
+    wo_duplicates = pdagr.drop_duplicates(subset=['pointTpMapX', 'pointTpMapY'], keep=False)
     duplicates_only = pdagr[~pdagr.apply(tuple, 1).isin(wo_duplicates.apply(tuple, 1))]
-    duplicates_only.sort_values(['pointTpMapX', 'pointTpMapY'])
+    duplicates_only = duplicates_only.sort_values(by=['pointTpMapX', 'pointTpMapY', 'name'])
     prev_name = ''
-    prev_value_before = 0.0
-    prev_value_after = 0.0
+    coords_before = [0.0, 0.0]
+    coords_after = [0.0, 0.0]
     # It`s a shame but I couldn`t find a way to vectorise cycle below
+    # Still not working as intended. Thinking on moving only not matching names
     for index, row in duplicates_only.iterrows():
-        if prev_value_before == row['pointTpMapY']:
-            prev_value_before = row['pointTpMapY']
-            duplicates_only.at[index, 'pointTpMapY'] = prev_value_after + 0.001
+        curr_coords = row[['pointTpMapX', 'pointTpMapY']].tolist()
+        if coords_before == curr_coords and prev_name != row['name']:
+            coords_before = curr_coords
+            duplicates_only.at[index, 'pointTpMapY'] = coords_after[1] + 0.005
+        elif prev_name == row['name']:
+            duplicates_only.at[index, 'pointTpMapY'] = coords_before[1]
         else:
-            prev_value_before = row['pointTpMapY']
-            duplicates_only.at[index, 'pointTpMapY'] += 0.001
-        prev_value_after = duplicates_only.at[index, 'pointTpMapY']
+            coords_before = curr_coords
+        coords_after[0] = duplicates_only.at[index, 'pointTpMapX']
+        coords_after[1] = duplicates_only.at[index, 'pointTpMapY']
+        prev_name = row['name']
 
     pdagr = wo_duplicates.append(duplicates_only)
+
     # Create data for lines from BZ
     joined = pdagr.merge(pdbz, left_on='fromBzKey', right_on='bzKey')
     lines_from = joined.dropna(subset=['fromBzKey'])
@@ -107,8 +114,7 @@ def plot_ENTSOG_map():
               from_x1,
               from_y1,
               color="blue",
-              line_width=2,
-              line_dash='dashed',
+              line_width=1,
               legend_label='Потоки от балансовых зон')
 
     # Plot Balancing zones
