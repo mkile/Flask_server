@@ -46,7 +46,7 @@ def plot_ENTSOG_map():
             coords_before = curr_coords
             duplicates_only.at[index, 'pointTpMapY'] = coords_after[1] + 0.005
         elif prev_name == row['name']:
-            duplicates_only.at[index, 'pointTpMapY'] = coords_before[1]
+            duplicates_only.at[index, 'pointTpMapY'] = coords_after[1]
         else:
             coords_before = curr_coords
         coords_after[0] = duplicates_only.at[index, 'pointTpMapX']
