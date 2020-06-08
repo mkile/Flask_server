@@ -5,6 +5,88 @@ from bokeh.plotting import figure
 from bokeh.models import ColumnDataSource
 from bokeh.models.tools import HoverTool
 from bokeh.embed import json_item
+from scipy.spatial import ConvexHull
+import random
+
+
+def prepare_BZ_outlines(full_points_list):
+    bz_list = full_points_list['toBzKey']
+    full_points_list.rename(columns={'fromBzKey':'toBzKey'})
+    bz_list.append(full_points_list['toBzKey'])
+    bz_list = bz_list.drop_duplicates().dropna().to_list()
+    result = []
+    for bz in bz_list:
+        bz_points = full_points_list[full_points_list['toBzKey'] == bz]
+        bz_points.append(full_points_list[full_points_list['fromBzKey'] == bz])
+        bz_points = bz_points.drop_duplicates(['pointTpMapX', 'pointTpMapY'])
+        xs = bz_points['pointTpMapX'].to_list()
+        ys = bz_points['pointTpMapY'].to_list()
+
+        #plot_dataframe_coords(bz_points, bz)
+
+        list_points = [[x, y] for x, y in zip(xs, ys)]
+        if len(bz_points) >= 2:
+            try:
+                hull = ConvexHull(list_points)
+                hull = list(hull.points[hull.vertices])
+                hullx = [p[0] for p in hull]
+                hully = [p[1] for p in hull]
+                result.append([hullx, hully])
+                #plot_list_coords(list_points, result[-1], bz)
+            except Exception as E:
+                print(E)
+    return result
+
+
+def plot_list_coords(sc, dc, name):
+    # Debug function
+    from bokeh.plotting import figure
+    from bokeh.resources import CDN
+    from bokeh.embed import file_html
+
+    px = [p[0] for p in sc]
+    py = [p[1] for p in sc]
+
+    ox = [p for p in dc[0]]
+    oy = [p for p in dc[1]]
+
+
+    p = figure()
+    p.diamond(px, py, size=12, fill_color='#2DDBE7')
+
+    p.patch(ox, oy, alpha=0.5)
+
+    html = file_html(p, CDN, name)
+    file = open('.\\html_from_lists\\' + name + '.html', 'w')
+    file.write(html)
+    file.close()
+
+
+def plot_dataframe_coords(coords, name):
+    # Debug function
+    from bokeh.plotting import figure
+    from bokeh.resources import CDN
+    from bokeh.embed import file_html
+
+    p = figure()
+    data = ColumnDataSource(coords)
+    p.diamond(x='pointTpMapX',
+                           y='pointTpMapY',
+                           source=data,
+                           size=12,
+                           fill_color='#2DDBE7',
+                           legend_label='name')
+
+    hover = HoverTool()
+    hover.tooltips = [
+        ('Label', '@name'),
+    ]
+    p.add_tools(hover)
+
+    html = file_html(p, CDN, name)
+    file = open('.\\html\\' + name + '.html', 'w')
+    file.write(html)
+    file.close()
 
 
 def plot_ENTSOG_map():
@@ -30,7 +112,11 @@ def plot_ENTSOG_map():
          'toBzKey',
          'toPointKey']]
     pdagr = pdagr.drop_duplicates()
-    # Move duplicating endpoints up 0.01
+    # Make balance_zones_outline
+    pdbz_temp = pdbz.rename(columns={'tpMapX': 'pointTpMapX', 'tpMapY': 'pointTpMapY', 'bzKey': 'fromBzKey'})
+    outlines = prepare_BZ_outlines(pdagr.append(pdbz_temp[['name', 'pointTpMapX', 'pointTpMapY', 'fromBzKey']]))
+    del pdbz_temp
+    # Move duplicating endpoints up 0.005
     # Need to remove 'normal' points having only entry exit and not ovelapping
     wo_duplicates = pdagr.drop_duplicates(subset=['pointTpMapX', 'pointTpMapY'], keep=False)
     duplicates_only = pdagr[~pdagr.apply(tuple, 1).isin(wo_duplicates.apply(tuple, 1))]
@@ -39,7 +125,6 @@ def plot_ENTSOG_map():
     coords_before = [0.0, 0.0]
     coords_after = [0.0, 0.0]
     # It`s a shame but I couldn`t find a way to vectorise cycle below
-    # Still not working as intended. Thinking on moving only not matching names
     for index, row in duplicates_only.iterrows():
         curr_coords = row[['pointTpMapX', 'pointTpMapY']].tolist()
         if coords_before == curr_coords and prev_name != row['name']:
@@ -79,6 +164,7 @@ def plot_ENTSOG_map():
     # Remove UGS and  LNG from ips_list
     ips_list = ips_list[~ips_list['name'].str.contains('UGS')]
     ips_list = ips_list[~ips_list['pointKey'].str.contains('LNG')]
+
     # Work with bokeh
 
     balance_zones = ColumnDataSource(pdbz)
@@ -88,6 +174,11 @@ def plot_ENTSOG_map():
 
     p = figure()
     p.sizing_mode = 'scale_width'
+
+    # Create polylines connecting all points going to and from balance zones to show it`s area
+    for bz_outline_x, bz_outline_y in outlines:
+        r = lambda: random.randint(0,255)
+        p.patch(bz_outline_x, bz_outline_y, alpha=0.5, fill_color='#%02X%02X%02X' % (r(),r(),r()))
 
     # lines to bz
     from_x0 = lines_to['pointTpMapX'].tolist()
