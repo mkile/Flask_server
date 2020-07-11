@@ -9,8 +9,15 @@
   <div id="myplot"></div>
   <script>
   fetch('/gis_data_plot')
-    .then(function(response) { return response.json(); })
-    .then(function(item) { return Bokeh.embed.embed_item(item); })
+    .then(function(response) { return response.json() })
+    .then(function(item) { return Bokeh.embed.embed_item(item) })
+  </script>
+  <br>
+  <div id="mytable"></div>
+  <script>
+  fetch('/gis_data_table')
+    .then(function(response) { return response.json() })
+    .then(function(item) { return Bokeh.embed.embed_item(item) })
   </script>
   <br>
   <p><a href="/" class="button two">Вернуться на главную страницу</a></p>

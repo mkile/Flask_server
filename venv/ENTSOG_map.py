@@ -1,8 +1,11 @@
+from distutils.command.check import check
+
 import requests
 import pandas
 import json
 from bokeh.plotting import figure
-from bokeh.models import ColumnDataSource
+from bokeh.models import ColumnDataSource, DataTable, CustomJS, CheckboxGroup, TableColumn
+from bokeh.layouts import column, row, gridplot
 from bokeh.models.tools import HoverTool
 from bokeh.embed import json_item
 from scipy.spatial import ConvexHull
@@ -11,17 +14,15 @@ import random
 
 def prepare_BZ_outlines(full_points_list):
     bz_list = full_points_list['toBzKey']
-    full_points_list.rename(columns={'fromBzKey':'toBzKey'})
-    bz_list.append(full_points_list['toBzKey'])
+    bz_list.append(full_points_list['fromBzKey'].rename('toBzKey'))
     bz_list = bz_list.drop_duplicates().dropna().to_list()
     result = []
     for bz in bz_list:
         bz_points = full_points_list[full_points_list['toBzKey'] == bz]
-        bz_points.append(full_points_list[full_points_list['fromBzKey'] == bz])
+        bz_points = bz_points.append(full_points_list[full_points_list['fromBzKey'] == bz])
         bz_points = bz_points.drop_duplicates(['pointTpMapX', 'pointTpMapY'])
         xs = bz_points['pointTpMapX'].to_list()
         ys = bz_points['pointTpMapY'].to_list()
-
         #plot_dataframe_coords(bz_points, bz)
 
         list_points = [[x, y] for x, y in zip(xs, ys)]
@@ -31,7 +32,7 @@ def prepare_BZ_outlines(full_points_list):
                 hull = list(hull.points[hull.vertices])
                 hullx = [p[0] for p in hull]
                 hully = [p[1] for p in hull]
-                result.append([hullx, hully])
+                result.append([hullx, hully, bz])
                 #plot_list_coords(list_points, result[-1], bz)
             except Exception as E:
                 print(E)
@@ -124,6 +125,7 @@ def plot_ENTSOG_map():
     prev_name = ''
     coords_before = [0.0, 0.0]
     coords_after = [0.0, 0.0]
+    # Shift points occupying same location
     # It`s a shame but I couldn`t find a way to vectorise cycle below
     for index, row in duplicates_only.iterrows():
         curr_coords = row[['pointTpMapX', 'pointTpMapY']].tolist()
@@ -172,13 +174,36 @@ def plot_ENTSOG_map():
     UGS = ColumnDataSource(UGS_list)
     LNG = ColumnDataSource(LNG_list)
 
-    p = figure()
+    p = figure(output_backend="webgl")
     p.sizing_mode = 'scale_width'
 
     # Create polylines connecting all points going to and from balance zones to show it`s area
-    for bz_outline_x, bz_outline_y in outlines:
-        r = lambda: random.randint(0,255)
-        p.patch(bz_outline_x, bz_outline_y, alpha=0.5, fill_color='#%02X%02X%02X' % (r(),r(),r()))
+    template = """if (cb_obj.active.includes({num})){{{obj}.visible = true}}
+                    else {{{obj}.visible = false}}
+                    """
+    l = []
+    args = {}
+    code = ''
+    num = 0
+    r = lambda: random.randint(0, 255)
+    bz_list = []
+    for bz_outline_x, bz_outline_y, bz in outlines:
+        bz_name = 'bz' + str(num)
+        bz_list.append(bz) # bz
+        l.append(p.patch(bz_outline_x, bz_outline_y, alpha=0.5, fill_color='#%02X%02X%02X' % (r(),r(),r())))
+        code += template.format(num=num, obj=bz_name)
+        args[bz_name] = l[-1]
+        num += 1
+    checkboxes = CheckboxGroup(labels=bz_list, active=list(range(len(bz_list))))
+    checkboxes.sizing_mode = 'fixed'
+    checkboxes.width = 300
+    callback = CustomJS(code=code, args=args)
+    checkboxes.js_on_click(callback)
+
+    # Testing switch on/off for bz
+    # checkbox = CheckboxGroup(labels=['test'], active=[0])
+    # callback = CustomJS(code=template.format(num=0, obj='test'), args={'test':l[0]})
+    # checkbox.js_on_click(callback)
 
     # lines to bz
     from_x0 = lines_to['pointTpMapX'].tolist()
@@ -247,8 +272,48 @@ def plot_ENTSOG_map():
 
     p.add_tools(hover)
 
+    layout = gridplot(children=[p, checkboxes], ncols=2, sizing_mode='scale_both')
+
     # return json
-    return json.dumps(json_item(p, "myplot"))
+    return json.dumps(json_item(layout, "myplot"))
+
+def plot_ENTSOG_table():
+    bz = requests.get('https://transparency.entsog.eu/api/v1/balancingzones?limit=-1')
+    agr_ic = requests.get('https://transparency.entsog.eu/api/v1/Interconnections?limit=-1')
+    pdbz = pandas.DataFrame(json.loads(bz.text)['balancingzones'])
+    pdbz = pdbz.drop_duplicates()
+
+    pdagr = pandas.DataFrame(json.loads(agr_ic.text)['Interconnections'])
+    pdagr = pdagr.drop_duplicates()
+    # Work with bokeh
+
+    balance_zones = ColumnDataSource(pdbz)
+    points = ColumnDataSource(pdagr)
+
+    p = figure()
+    p.sizing_mode = 'scale_width'
+
+    bzcolumns = [
+        TableColumn(field='bzKey', title='Ключ балансовой зоны'),
+        TableColumn(field='bzLabel', title='Наименование балансовой зоны'),
+        TableColumn(field='bzLabelLong', title='Описание балансовой зоны'),
+    ]
+    bzdatatable = DataTable(source=balance_zones, columns=bzcolumns)
+
+    pdcolumns = [
+        TableColumn(field='pointKey', title='Ключ пункта'),
+        TableColumn(field='pointLabel', title='Метка пункта'),
+        TableColumn(field='fromBzLabel', title='В пункт поступает из БЗ'),
+        TableColumn(field='fromPointKey', title='В пункт поступает из пункта'),
+        TableColumn(field='toBzLabel', title='Из пункта поступает из БЗ'),
+        TableColumn(field='toPointKey', title='Из пункта поступает в пункта'),
+    ]
+    pdagrdatatable = DataTable(source=points, columns=pdcolumns)
+    
+    layout = row(bzdatatable, pdagrdatatable)
+
+    # return json
+    return json.dumps(json_item(layout, "mytable"))
 
 if __name__ == "__main__":
     plot_ENTSOG_map()

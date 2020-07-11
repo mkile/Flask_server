@@ -2,7 +2,7 @@ from flask import Flask, render_template, url_for, copy_current_request_context,
 from flask import redirect, request, session, make_response
 from Transport_data_collectors.FGSZ import get_FGSZ_vr_data
 from Transport_data_collectors.ENTSOG import get_ENTSOG_vr_data
-from ENTSOG_map import plot_ENTSOG_map
+from ENTSOG_map import plot_ENTSOG_map, plot_ENTSOG_table
 import os
 from time import sleep
 from werkzeug.exceptions import HTTPException
@@ -65,6 +65,11 @@ def entsog_gis_plot():
         return render_template('login.html')
     return plot_ENTSOG_map()
 
+@app.route('/gis_data_table')
+def entsog_table_plot():
+    if not session.get('logged_in'):
+        return render_template('login.html')
+    return plot_ENTSOG_table()
 
 @app.route('/fgsz', methods=['POST', 'GET'])
 def fgsz_page():
@@ -114,6 +119,7 @@ def not_found(error):
 def not_found(error):
     sleep(2)
     return render_template('success.html', result_var='Ошибка сервера ' + str(error))
+
 
 app.config['SECRET_KEY'] = os.urandom(16)
 app.config['DEBUG'] = True

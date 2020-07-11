@@ -34,40 +34,45 @@ def Data_dispatcher():
 
 
 def get_ENTSOG_vr_data():
-    points_list = ['PL-TSO-0002ITP-00089exit', 'sk-tso-0001itp-00117exit', 'hu-tso-0001itp-10006exit', 'ro-tso-0001itp-00438exit']
+    # Timedelta for dates
+    delta = 2
+    # List of points for reverse calculation
+    points_list = ['pl-tso-0002itp-10008exit', 'sk-tso-0001itp-00117exit', 'hu-tso-0001itp-10006exit', 'ro-tso-0001itp-00438exit']
+    # Line break
+    br = '\n'
     # Variable for comments
     comment = ''
     # Variable for resulting data
     stringio = io.StringIO()
 
     now = datetime.now()
-    date_from = (datetime(now.year, now.month, now.day) - timedelta(days=2)).strftime('%Y-%m-%d')
+    date_from = (datetime(now.year, now.month, now.day) - timedelta(days=delta)).strftime('%Y-%m-%d')
     date_mid = (datetime(now.year, now.month, now.day) - timedelta(days=1)).strftime('%Y-%m-%d')
     date_to = (datetime(now.year, now.month, now.day)).strftime('%Y-%m-%d')
     #Allocation Data Recieve
     stringio.write('<h3>Протокол обновления данных</h3>')
     stringio.write('<textarea rows="10" cols="100">')
-    stringio.write(f"Getting {indicator_list[0]} data for {str(date_from)}")
+    stringio.write(f"Getting {indicator_list[0]} data for {str(date_from)} " + br)
     Aldata = pandas.DataFrame()
     for point in points_list:
         link = link_template % (point, date_from, date_to, indicator_list[0])
-        stringio.write(link)
+        stringio.write(link + br)
         Aldata = Aldata.append(getandprocessJSONdataENTSOG(link))
     Aldata = Aldata.sort_values('date')
     #GCV Data Recieve
-    stringio.write(f"Getting {indicator_list[1]} data for {str(date_from)}")
+    stringio.write(br + f"Getting {indicator_list[1]} data for {str(date_from)} " + br)
     GCVData = pandas.DataFrame()
     for point in points_list:
         link = link_template % (point, date_from, date_to, indicator_list[1])
-        stringio.write(link)
+        stringio.write(link + br)
         GCVData = GCVData.append(getandprocessJSONdataENTSOG(link))
     GCVData = GCVData.sort_values('date')
     # Renomination Data Recieve
-    stringio.write(f"Getting {indicator_list[2]} data for {str(date_from)}")
+    stringio.write(br + f"Getting {indicator_list[2]} data for {str(date_from)}" + br)
     RenData = pandas.DataFrame()
     for point in points_list:
         link = link_template % (point, date_from, date_to, indicator_list[2])
-        stringio.write(link)
+        stringio.write(link + br)
         RenData = RenData.append(getandprocessJSONdataENTSOG(link))
     RenData = RenData.sort_values('date')
     #Output collected data separately
@@ -116,14 +121,14 @@ def get_ENTSOG_vr_data():
             comment += add_table_row(f'Аллокация для Д-2 отсутствует, для пункта {point} используем реноминацию.')
             Al_d_2_value = filter_df(filter_df(Vdata,
                                                filter_d_2,
-                                               'Renomination_M3'), point, 'point')['Renomination_M3'].sum()
+                                               'date'), point, 'point')['Renomination_M3'].sum()
             if Al_d_2_value == 0:
                 comment += add_table_row('Реноминация за Д-2 отсутствует, или равна 0.')
         if Al_d_1_value == 0:
             comment += add_table_row('Аллокация для Д-1 отсутствует, используем реноминацию.')
             Al_d_1_value = filter_df(filter_df(Vdata,
                                                filter_d_1,
-                                               'Renomination_M3'), point, 'point')['Renomination_M3'].sum()
+                                               'date'), point, 'point')['Renomination_M3'].sum()
             if Al_d_1_value == 0:
                 comment += add_table_row('Реноминация за Д-1 отсутствует или равна 0.')
                 comment += add_table_row(error_msg)
@@ -141,6 +146,7 @@ def get_ENTSOG_vr_data():
     # Рассчитаем показатели и выгрузим результат
 
     for index, point in enumerate(points):
+        Al_d_2_8 = Al_d_2[index]
         Al_d_1_8 = Al_d_1[index]
         Al_d_1_10 = Al_d_1_8 / 24 * 21 + Ren_d[index] / 24 * 3
         Al_d_2_10 = Al_d_2[index] / 24 * 21 + Al_d_1[index] / 24 * 3
@@ -148,6 +154,7 @@ def get_ENTSOG_vr_data():
         stringio.write(add_html_line(f'<br><p><h1>Данные по виртуальному реверсу через ГИС {point}:</h1>'))
         stringio.write(add_html_line(in_for + '07-07 за {} - {:.3f}'.format(turn_date(filter_d_1), round_half_up(Al_d_1_8, 3))))
         stringio.write(add_html_line(in_for + '10-10 за {} - {:.3f}'.format(turn_date(filter_d_1), round_half_up(Al_d_1_10, 3))))
+        stringio.write(add_html_line(in_for + '07-07 за {} - {:.3f}'.format(turn_date(filter_d_2), round_half_up(Al_d_2_8, 3))))
         stringio.write(add_html_line(in_for + '10-10 за {} - {:.3f}'.format(turn_date(filter_d_2), round_half_up(Al_d_2_10, 3))))
     # Если есть ошибки, то выгрузим протокол
     if len(comment) > 0:
