@@ -165,7 +165,7 @@ def plot_ENTSOG_map():
     UGS_list = ips_list[ips_list['name'].str.contains('UGS')]
     # Get list of LNG
     LNG_list = ips_list[ips_list['pointKey'].str.contains('LNG')]
-    # Remove UGS and  LNG from ips_list
+    # Remove UGS and LNG from ips_list
     ips_list = ips_list[~ips_list['name'].str.contains('UGS')]
     ips_list = ips_list[~ips_list['pointKey'].str.contains('LNG')]
 
@@ -202,15 +202,8 @@ def plot_ENTSOG_map():
 
     # Create checboxes
     checkboxes = CheckboxGroup(labels=bz_list, active=list(range(len(bz_list))))
-    checkboxes.sizing_mode = 'fixed'
-    checkboxes.width = 300
     callback = CustomJS(code=code, args=args)
     checkboxes.js_on_click(callback)
-
-    # Testing switch on/off for bz
-    # checkbox = CheckboxGroup(labels=['test'], active=[0])
-    # callback = CustomJS(code=template.format(num=0, obj='test'), args={'test':l[0]})
-    # checkbox.js_on_click(callback)
 
     # lines to bz
     from_x0 = lines_to['pointTpMapX'].tolist()
@@ -280,8 +273,8 @@ def plot_ENTSOG_map():
     p.add_tools(hover)
 
     layout = row(
-        children=[p, column(children=[boxes_title, checkboxes], sizing_mode='fixed', width=300)],
-        sizing_mode='scale_width')
+        children=[p, column(children=[boxes_title, checkboxes], sizing_mode='scale_both')],
+        sizing_mode='scale_height')
 
     # return json
     return json.dumps(json_item(layout, "myplot"))
@@ -314,15 +307,15 @@ def plot_ENTSOG_table():
     pdcolumns = [
         TableColumn(field='pointKey', title='Ключ пункта'),
         TableColumn(field='pointLabel', title='Метка пункта'),
-        TableColumn(field='fromBzLabel', title='В пункт поступает из БЗ'),
-        TableColumn(field='fromPointKey', title='В пункт поступает из пункта'),
-        TableColumn(field='toBzLabel', title='Из пункта поступает из БЗ'),
-        TableColumn(field='toPointKey', title='Из пункта поступает в пункта'),
+        TableColumn(field='fromBzLabel', title='Поступает из БЗ'),
+        TableColumn(field='fromPointKey', title='Поступает из пункта'),
+        TableColumn(field='toBzLabel', title='Поступает в БЗ'),
+        TableColumn(field='toPointKey', title='Поступает в пункт'),
     ]
     pdagrdatatable = DataTable(source=points, columns=pdcolumns)
     pd_text = Div(text='<h2>Список пунктов</h2>')
 
-    layout = row(column(bz_text, bzdatatable), column(children=[pd_text, pdagrdatatable], sizing_mode='scale_width'), sizing_mode='stretch_both')
+    layout = row(column(bz_text, bzdatatable), column(children=[pd_text, pdagrdatatable], sizing_mode='stretch_both'), sizing_mode='scale_both')
 
     # return json
     return json.dumps(json_item(layout, "mytable"))
