@@ -4,13 +4,15 @@ import requests
 import pandas
 import json
 from bokeh.plotting import figure
-from bokeh.models import ColumnDataSource, DataTable, CustomJS, CheckboxGroup, TableColumn
-from bokeh.layouts import column, row, gridplot
+from bokeh.models import ColumnDataSource, DataTable, CustomJS, CheckboxGroup, TableColumn, Div
+from bokeh.layouts import column, row
 from bokeh.models.tools import HoverTool
 from bokeh.embed import json_item
 from scipy.spatial import ConvexHull
 import random
 
+bz_link = 'https://transparency.entsog.eu/api/v1/balancingzones?limit=-1'
+points_link = 'https://transparency.entsog.eu/api/v1/Interconnections?limit=-1'
 
 def prepare_BZ_outlines(full_points_list):
     bz_list = full_points_list['toBzKey']
@@ -91,8 +93,8 @@ def plot_dataframe_coords(coords, name):
 
 
 def plot_ENTSOG_map():
-    bz = requests.get('https://transparency.entsog.eu/api/v1/balancingzones?limit=-1')
-    agr_ic = requests.get('https://transparency.entsog.eu/api/v1/Interconnections?limit=-1')
+    bz = requests.get(bz_link)
+    agr_ic = requests.get(points_link)
     jsbz = json.loads(bz.text)
     jsbz = jsbz['balancingzones']
     pdbz = pandas.DataFrame(jsbz)
@@ -127,18 +129,18 @@ def plot_ENTSOG_map():
     coords_after = [0.0, 0.0]
     # Shift points occupying same location
     # It`s a shame but I couldn`t find a way to vectorise cycle below
-    for index, row in duplicates_only.iterrows():
-        curr_coords = row[['pointTpMapX', 'pointTpMapY']].tolist()
-        if coords_before == curr_coords and prev_name != row['name']:
+    for index, row_ in duplicates_only.iterrows():
+        curr_coords = row_[['pointTpMapX', 'pointTpMapY']].tolist()
+        if coords_before == curr_coords and prev_name != row_['name']:
             coords_before = curr_coords
             duplicates_only.at[index, 'pointTpMapY'] = coords_after[1] + 0.005
-        elif prev_name == row['name']:
+        elif prev_name == row_['name']:
             duplicates_only.at[index, 'pointTpMapY'] = coords_after[1]
         else:
             coords_before = curr_coords
         coords_after[0] = duplicates_only.at[index, 'pointTpMapX']
         coords_after[1] = duplicates_only.at[index, 'pointTpMapY']
-        prev_name = row['name']
+        prev_name = row_['name']
 
     pdagr = wo_duplicates.append(duplicates_only)
 
@@ -189,11 +191,16 @@ def plot_ENTSOG_map():
     bz_list = []
     for bz_outline_x, bz_outline_y, bz in outlines:
         bz_name = 'bz' + str(num)
-        bz_list.append(bz) # bz
+        bz_list.append(pdbz.loc[pdbz['bzKey'] == bz, 'name'].to_string(index=False)) # bz
         l.append(p.patch(bz_outline_x, bz_outline_y, alpha=0.5, fill_color='#%02X%02X%02X' % (r(),r(),r())))
         code += template.format(num=num, obj=bz_name)
         args[bz_name] = l[-1]
         num += 1
+
+    # Create title for checkboxes
+    boxes_title = Div(text='<h2>Список балансовых зон</h2>')
+
+    # Create checboxes
     checkboxes = CheckboxGroup(labels=bz_list, active=list(range(len(bz_list))))
     checkboxes.sizing_mode = 'fixed'
     checkboxes.width = 300
@@ -272,14 +279,17 @@ def plot_ENTSOG_map():
 
     p.add_tools(hover)
 
-    layout = gridplot(children=[p, checkboxes], ncols=2, sizing_mode='scale_both')
+    layout = row(
+        children=[p, column(children=[boxes_title, checkboxes], sizing_mode='fixed', width=300)],
+        sizing_mode='scale_width')
 
     # return json
     return json.dumps(json_item(layout, "myplot"))
 
+
 def plot_ENTSOG_table():
-    bz = requests.get('https://transparency.entsog.eu/api/v1/balancingzones?limit=-1')
-    agr_ic = requests.get('https://transparency.entsog.eu/api/v1/Interconnections?limit=-1')
+    bz = requests.get(bz_link)
+    agr_ic = requests.get(points_link)
     pdbz = pandas.DataFrame(json.loads(bz.text)['balancingzones'])
     pdbz = pdbz.drop_duplicates()
 
@@ -299,6 +309,7 @@ def plot_ENTSOG_table():
         TableColumn(field='bzLabelLong', title='Описание балансовой зоны'),
     ]
     bzdatatable = DataTable(source=balance_zones, columns=bzcolumns)
+    bz_text = Div(text='<h2>Список балансовых зон</h2>')
 
     pdcolumns = [
         TableColumn(field='pointKey', title='Ключ пункта'),
@@ -309,8 +320,9 @@ def plot_ENTSOG_table():
         TableColumn(field='toPointKey', title='Из пункта поступает в пункта'),
     ]
     pdagrdatatable = DataTable(source=points, columns=pdcolumns)
-    
-    layout = row(bzdatatable, pdagrdatatable)
+    pd_text = Div(text='<h2>Список пунктов</h2>')
+
+    layout = row(column(bz_text, bzdatatable), column(children=[pd_text, pdagrdatatable], sizing_mode='scale_width'), sizing_mode='stretch_both')
 
     # return json
     return json.dumps(json_item(layout, "mytable"))
