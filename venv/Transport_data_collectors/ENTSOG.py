@@ -1,17 +1,17 @@
-import json
-import requests
+"""
+Functions for collecting necessary data from ENTSOG and prearing it for showing or sending
+"""
+
 from datetime import timedelta, datetime
 import pandas
 import tabulate
 from Transport_data_collectors.common import filter_df, add_html_line, add_html_link, turn_date, round_half_up, \
-    add_table_row
+    add_table_row, getandprocessJSONdataENTSOG, executeRequest, getJSONdataENTSOG, error_msg
 from dateutil.parser import parse
 import io
 
 # Данные
-Fields = ['date', 'point']
 Suffixes =['V', 'G']
-error_msg = '#error#'
 link_template = 'https://transparency.entsog.eu/api/v1/operationalData?periodType=day&pointDirection=' \
                 '%s&from=%s&to=%s&indicator=%s&timezone=CET&periodize=0&sort=PeriodFrom&limit=-1'
 indicator_list = ['Allocation', 'GCV', 'Renomination']
@@ -33,11 +33,11 @@ def Data_dispatcher():
         get_ENTSOG_vr_data()
 
 
-def get_ENTSOG_vr_data():
+def get_ENTSOG_vr_data(settings, email = False):
     # Timedelta for dates
     delta = 2
     # List of points for reverse calculation
-    points_list = ['pl-tso-0002itp-10008exit', 'sk-tso-0001itp-00117exit', 'hu-tso-0001itp-10006exit', 'ro-tso-0001itp-00438exit']
+    points_list = settings
     # Line break
     br = '\n'
     # Variable for comments
@@ -85,7 +85,9 @@ def get_ENTSOG_vr_data():
     stringio.write(RenData.to_html(index=False, decimal=','))
     # join tables
     Vdata = pandas.merge(RenData, GCVData, left_on=['date', 'point'], right_on=['date', 'point'], how='outer')
+    Vdata = Vdata.sort_values(['point', 'date'], ascending=True)
     Vdata = Vdata.fillna(method='ffill')
+    Vdata = Vdata.sort_values(['date', 'point'], ascending=True)
     Vdata = pandas.merge(Vdata, Aldata, left_on=['date', 'point'], right_on=['date', 'point'], how='outer')
     #calculate m3
     Vdata['Allocation_M3'] = Vdata['Allocation'] / Vdata['GCV'] / 10 ** 6 * 1.0738
@@ -144,26 +146,53 @@ def get_ENTSOG_vr_data():
     stringio.write('<h2>Таблица данных для расчёта</h2>')
     stringio.write(Vdata.to_html(index=False, decimal=','))
     # Рассчитаем показатели и выгрузим результат
-
+    Summary_by_type = {}
+    Summary_by_type['d-2-8'] = 0
+    Summary_by_type['d-1-8'] = 0
+    Summary_by_type['d-2-10'] = 0
+    Summary_by_type['d-1-10'] = 0
+    in_for = 'В формате '
     for index, point in enumerate(points):
         Al_d_2_8 = Al_d_2[index]
+        Summary_by_type['d-2-8'] += Al_d_2_8
         Al_d_1_8 = Al_d_1[index]
+        Summary_by_type['d-1-8'] += Al_d_1_8
         Al_d_1_10 = Al_d_1_8 / 24 * 21 + Ren_d[index] / 24 * 3
+        Summary_by_type['d-1-10'] += Al_d_1_10
         Al_d_2_10 = Al_d_2[index] / 24 * 21 + Al_d_1[index] / 24 * 3
-        in_for = 'В формате '
+        Summary_by_type['d-2-10'] += Al_d_2_10
         stringio.write(add_html_line(f'<br><p><h1>Данные по виртуальному реверсу через ГИС {point}:</h1>'))
-        stringio.write(add_html_line(in_for + '07-07 за {} - {:.3f}'.format(turn_date(filter_d_1), round_half_up(Al_d_1_8, 3))))
-        stringio.write(add_html_line(in_for + '10-10 за {} - {:.3f}'.format(turn_date(filter_d_1), round_half_up(Al_d_1_10, 3))))
-        stringio.write(add_html_line(in_for + '07-07 за {} - {:.3f}'.format(turn_date(filter_d_2), round_half_up(Al_d_2_8, 3))))
-        stringio.write(add_html_line(in_for + '10-10 за {} - {:.3f}'.format(turn_date(filter_d_2), round_half_up(Al_d_2_10, 3))))
+        stringio.write(add_html_line(in_for + '07-07 за {} - {:.3f}'.format(turn_date(filter_d_1),
+                                                                            round_half_up(Al_d_1_8, 3))))
+        stringio.write(add_html_line(in_for + '10-10 за {} - {:.3f}'.format(turn_date(filter_d_1),
+                                                                            round_half_up(Al_d_1_10, 3))))
+        stringio.write(add_html_line(in_for + '07-07 за {} - {:.3f}'.format(turn_date(filter_d_2),
+                                                                            round_half_up(Al_d_2_8, 3))))
+        stringio.write(add_html_line(in_for + '10-10 за {} - {:.3f}'.format(turn_date(filter_d_2),
+                                                                            round_half_up(Al_d_2_10, 3))))
+    # Если отправляем сообщение, то оставляем только итог
+    if email == True:
+        stringio = io.StringIO()
+
+    # Запишем суммарные данные по всем ГИС
+    stringio.write(add_html_line('<br><p><h1>Суммарные данные по виртуальному реверсу:</h1>'))
+    stringio.write(add_html_line(in_for + '07-07 за {} - {:.3f}'.format(turn_date(filter_d_1),
+                                                                        round_half_up(Summary_by_type['d-1-8'], 3))))
+    stringio.write(add_html_line(in_for + '10-10 за {} - {:.3f}'.format(turn_date(filter_d_1),
+                                                                        round_half_up(Summary_by_type['d-1-10'], 3))))
+    stringio.write(add_html_line(in_for + '07-07 за {} - {:.3f}'.format(turn_date(filter_d_2),
+                                                                        round_half_up(Summary_by_type['d-2-8'], 3))))
+    stringio.write(add_html_line(in_for + '10-10 за {} - {:.3f}'.format(turn_date(filter_d_2),
+                                                                        round_half_up(Summary_by_type['d-2-10'], 3))))
     # Если есть ошибки, то выгрузим протокол
-    if len(comment) > 0:
+    if len(comment) > 0 and email == False:
         stringio.write('<br><h3>Ошибки загрузки данных.</h3>')
         stringio.write('<table class="errortable"> <tbody>')
         stringio.write(comment.replace(error_msg, 'Внимание !'))
         stringio.write('</tbody></table>')
     return stringio.getvalue()
 
+# This one is obsolete
 def get_and_send_GCV_data():
 # Если время отправки калорийности наступило
     date1 = (datetime(now.year, now.month, now.day) - timedelta(days=2)).strftime('%Y-%m-%d')
@@ -196,53 +225,6 @@ def get_and_send_GCV_data():
     except Exception as e:
         print("Error sending ", e)
     return
-
-def getandprocessJSONdataENTSOG(link):
-# get data from internet and process json with it
-    response = executeRequest(link)
-    if response != error_msg:
-        return getJSONdataENTSOG(response)
-    return
-
-def executeRequest(link):
-# get data with request
-    try:
-        print('Getting data from link: ', link)
-        response = requests.get(link)
-        if response.status_code != 200:
-            return error_msg
-        print('Data recieved.')
-        return response
-    except Exception as e:
-        print('Error getting data from server ', e)
-        result = list()
-        result.append('no data')
-        result.append('Error getting data from server', e)
-        return error_msg
-
-def getJSONdataENTSOG(response):
-# load entsog data and return pandas dataframe
-    indicator = ''
-    try:
-        jsondata = json.loads(response.text)
-        if jsondata == error_msg:
-            return''
-        result = list()
-        for js in jsondata['operationalData']:
-            line = list()
-            line.append(js['periodFrom'])
-            line.append(js['pointLabel'])
-            line.append(js['value'])
-            if indicator == '':
-                indicator = js['indicator']
-            result.append(line)
-        Field = Fields.copy()
-        Field.append(indicator)
-        return pandas.DataFrame(result, columns=Field)
-    except Exception as e:
-        print("Error getting data from json ", e)
-        print(jsondata)
-        return ''
 
 if __name__ == "__main__":
     get_ENTSOG_vr_data()

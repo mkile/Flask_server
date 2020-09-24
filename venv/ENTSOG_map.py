@@ -241,7 +241,7 @@ def plot_ENTSOG_map():
                     line_color='green',
                     fill_color='yellow',
                     legend_label='Балансовые зоны')
-
+    
     # Plot interconnection points
     icp = p.circle(x='pointTpMapX',
                    y='pointTpMapY',
