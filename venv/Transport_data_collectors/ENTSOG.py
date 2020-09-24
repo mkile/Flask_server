@@ -13,7 +13,7 @@ import io
 # Данные
 Suffixes =['V', 'G']
 link_template = 'https://transparency.entsog.eu/api/v1/operationalData?periodType=day&pointDirection=' \
-                '%s&from=%s&to=%s&indicator=%s&timezone=CET&periodize=0&sort=PeriodFrom&limit=-1'
+                '{}&from={}&to={}&indicator={}&timezone=CET&periodize=0&sort=PeriodFrom&limit=-1'
 indicator_list = ['Allocation', 'GCV', 'Renomination']
 
 
@@ -55,7 +55,7 @@ def get_ENTSOG_vr_data(settings, email = False):
     stringio.write(f"Getting {indicator_list[0]} data for {str(date_from)} " + br)
     Aldata = pandas.DataFrame()
     for point in points_list:
-        link = link_template % (point, date_from, date_to, indicator_list[0])
+        link = link_template.format(point, date_from, date_to, indicator_list[0])
         stringio.write(link + br)
         Aldata = Aldata.append(getandprocessJSONdataENTSOG(link))
     Aldata = Aldata.sort_values('date')
@@ -63,7 +63,7 @@ def get_ENTSOG_vr_data(settings, email = False):
     stringio.write(br + f"Getting {indicator_list[1]} data for {str(date_from)} " + br)
     GCVData = pandas.DataFrame()
     for point in points_list:
-        link = link_template % (point, date_from, date_to, indicator_list[1])
+        link = link_template.format(point, date_from, date_to, indicator_list[1])
         stringio.write(link + br)
         GCVData = GCVData.append(getandprocessJSONdataENTSOG(link))
     GCVData = GCVData.sort_values('date')
@@ -71,7 +71,7 @@ def get_ENTSOG_vr_data(settings, email = False):
     stringio.write(br + f"Getting {indicator_list[2]} data for {str(date_from)}" + br)
     RenData = pandas.DataFrame()
     for point in points_list:
-        link = link_template % (point, date_from, date_to, indicator_list[2])
+        link = link_template.format(point, date_from, date_to, indicator_list[2])
         stringio.write(link + br)
         RenData = RenData.append(getandprocessJSONdataENTSOG(link))
     RenData = RenData.sort_values('date')
@@ -227,4 +227,4 @@ def get_and_send_GCV_data():
     return
 
 if __name__ == "__main__":
-    get_ENTSOG_vr_data()
+    get_ENTSOG_vr_data(['sk-tso-0001itp-00421exit'])

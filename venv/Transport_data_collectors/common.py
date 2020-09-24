@@ -5,6 +5,7 @@ import pandas
 import math
 import requests
 import json
+import io
 
 #Константы
 error_msg = '#error#'
@@ -28,7 +29,7 @@ def add_html_link(textstring):
     return '<a href="' + textstring + '">' + textstring + '</a><br>'
 
 def turn_date(date):
-    # Dirty hack to convert date to necessary format
+    # Hack to convert date to necessary format
     return date[8:] + '.' + date[5:7] + '.' + date[:4]
 
 def round_half_up(n, decimals=0):
@@ -81,3 +82,15 @@ def getJSONdataENTSOG(response):
         print("Error getting data from json ", e)
         print(jsondata)
         return ''
+
+def get_excel_data(link):
+    with io.BytesIO(executeRequest(link).content) as csvfile:
+        return pandas.read_csv(csvfile)
+
+
+if __name__ == "__main__":
+    x = get_excel_data('https://transparency.entsog.eu/api/v1/operationalData.csv?forceDownload=true&'
+                       'delimiter=comma&from=2020-09-18&to=2020-09-23&indicator='
+                       'Nomination,Renomination,Allocation,Physical%20Flow,GCV&periodType=day&'
+                       'timezone=CET&periodize=0&limit=-1&isTransportData=true&dataset=1')
+    print(x.head())
