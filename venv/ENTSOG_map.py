@@ -14,7 +14,9 @@ import random
 bz_link = 'https://transparency.entsog.eu/api/v1/balancingzones?limit=-1'
 points_link = 'https://transparency.entsog.eu/api/v1/Interconnections?limit=-1'
 
+
 def prepare_BZ_outlines(full_points_list):
+    # Нарисовать контуры вокруг всех точек БЗ
     bz_list = full_points_list['toBzKey']
     bz_list.append(full_points_list['fromBzKey'].rename('toBzKey'))
     bz_list = bz_list.drop_duplicates().dropna().to_list()
@@ -25,7 +27,7 @@ def prepare_BZ_outlines(full_points_list):
         bz_points = bz_points.drop_duplicates(['pointTpMapX', 'pointTpMapY'])
         xs = bz_points['pointTpMapX'].to_list()
         ys = bz_points['pointTpMapY'].to_list()
-        #plot_dataframe_coords(bz_points, bz)
+        # plot_dataframe_coords(bz_points, bz)
 
         list_points = [[x, y] for x, y in zip(xs, ys)]
         if len(bz_points) >= 2:
@@ -35,7 +37,7 @@ def prepare_BZ_outlines(full_points_list):
                 hullx = [p[0] for p in hull]
                 hully = [p[1] for p in hull]
                 result.append([hullx, hully, bz])
-                #plot_list_coords(list_points, result[-1], bz)
+                # plot_list_coords(list_points, result[-1], bz)
             except Exception as E:
                 print(E)
     return result
@@ -52,7 +54,6 @@ def plot_list_coords(sc, dc, name):
 
     ox = [p for p in dc[0]]
     oy = [p for p in dc[1]]
-
 
     p = figure()
     p.diamond(px, py, size=12, fill_color='#2DDBE7')
@@ -74,11 +75,11 @@ def plot_dataframe_coords(coords, name):
     p = figure()
     data = ColumnDataSource(coords)
     p.diamond(x='pointTpMapX',
-                           y='pointTpMapY',
-                           source=data,
-                           size=12,
-                           fill_color='#2DDBE7',
-                           legend_label='name')
+              y='pointTpMapY',
+              source=data,
+              size=12,
+              fill_color='#2DDBE7',
+              legend_label='name')
 
     hover = HoverTool()
     hover.tooltips = [
@@ -93,6 +94,7 @@ def plot_dataframe_coords(coords, name):
 
 
 def plot_ENTSOG_map():
+    # Построить карту ENTSOG
     bz = requests.get(bz_link)
     agr_ic = requests.get(points_link)
     jsbz = json.loads(bz.text)
@@ -191,8 +193,8 @@ def plot_ENTSOG_map():
     bz_list = []
     for bz_outline_x, bz_outline_y, bz in outlines:
         bz_name = 'bz' + str(num)
-        bz_list.append(pdbz.loc[pdbz['bzKey'] == bz, 'name'].to_string(index=False)) # bz
-        l.append(p.patch(bz_outline_x, bz_outline_y, alpha=0.5, fill_color='#%02X%02X%02X' % (r(),r(),r())))
+        bz_list.append(pdbz.loc[pdbz['bzKey'] == bz, 'name'].to_string(index=False))  # bz
+        l.append(p.patch(bz_outline_x, bz_outline_y, alpha=0.5, fill_color='#%02X%02X%02X' % (r(), r(), r())))
         code += template.format(num=num, obj=bz_name)
         args[bz_name] = l[-1]
         num += 1
@@ -235,13 +237,13 @@ def plot_ENTSOG_map():
 
     # Plot Balancing zones
     bzp = p.circle_x(x='tpMapX',
-                    y='tpMapY',
-                    source=balance_zones,
-                    size=10,
-                    line_color='green',
-                    fill_color='yellow',
-                    legend_label='Балансовые зоны')
-    
+                     y='tpMapY',
+                     source=balance_zones,
+                     size=10,
+                     line_color='green',
+                     fill_color='yellow',
+                     legend_label='Балансовые зоны')
+
     # Plot interconnection points
     icp = p.circle(x='pointTpMapX',
                    y='pointTpMapY',
@@ -252,18 +254,18 @@ def plot_ENTSOG_map():
 
     # Plot UGS
     ugs_points = p.square(x='pointTpMapX',
-                   y='pointTpMapY',
-                   source=UGS,
-                   size=8,
-                   fill_color='#a240a2',
-                   legend_label='ПХГ')
+                          y='pointTpMapY',
+                          source=UGS,
+                          size=8,
+                          fill_color='#a240a2',
+                          legend_label='ПХГ')
     # Plot LNG
     lng_points = p.diamond(x='pointTpMapX',
-                          y='pointTpMapY',
-                          source=LNG,
-                          size=12,
-                          fill_color='#2DDBE7',
-                          legend_label='Терминалы СПГ')
+                           y='pointTpMapY',
+                           source=LNG,
+                           size=12,
+                           fill_color='#2DDBE7',
+                           legend_label='Терминалы СПГ')
 
     hover = HoverTool(renderers=[bzp, icp, ugs_points, lng_points])
     hover.tooltips = [
@@ -281,6 +283,7 @@ def plot_ENTSOG_map():
 
 
 def plot_ENTSOG_table():
+    # Создание таблиц БЗ и пунктов Bokeh
     bz = requests.get(bz_link)
     agr_ic = requests.get(points_link)
     pdbz = pandas.DataFrame(json.loads(bz.text)['balancingzones'])
@@ -315,10 +318,22 @@ def plot_ENTSOG_table():
     pdagrdatatable = DataTable(source=points, columns=pdcolumns)
     pd_text = Div(text='<h2>Список пунктов</h2>')
 
-    layout = row(column(bz_text, bzdatatable), column(children=[pd_text, pdagrdatatable], sizing_mode='stretch_both'), sizing_mode='scale_both')
+    layout = row(column(bz_text, bzdatatable), column(children=[pd_text, pdagrdatatable], sizing_mode='stretch_both'),
+                 sizing_mode='scale_both')
 
     # return json
     return json.dumps(json_item(layout, "mytable"))
+
+
+def create_data_table(pandas_table):
+    # Создание таблицы Bokeh из таблицы Pandas
+    source_table = ColumnDataSource(pandas_table)
+    column_names = pandas_table.columns.values
+    source_columns = [TableColumn(field=cname, title=cname) for cname in column_names]
+    agrtable = DataTable(source=source_table, columns=source_columns)
+    layout = row(agrtable, sizing_mode='stretch_both')
+    return json.dumps(json_item(layout, "mytable"))
+
 
 if __name__ == "__main__":
     plot_ENTSOG_map()

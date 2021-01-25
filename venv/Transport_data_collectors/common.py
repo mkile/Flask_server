@@ -65,7 +65,7 @@ def getJSONdataENTSOG(response):
     try:
         jsondata = json.loads(response.text)
         if jsondata == error_msg:
-            return''
+            return ''
         result = list()
         for js in jsondata['operationalData']:
             line = list()
@@ -84,8 +84,12 @@ def getJSONdataENTSOG(response):
         return ''
 
 def get_excel_data(link):
-    with io.BytesIO(executeRequest(link).content) as csvfile:
-        return pandas.read_csv(csvfile)
+    try:
+        with io.BytesIO(executeRequest(link).content) as csvfile:
+            return pandas.read_csv(csvfile)
+    except Exception as E:
+        print('Got error during processing link data ({}), error {}'.format(link, E))
+        return pandas.DataFrame()
 
 
 if __name__ == "__main__":
