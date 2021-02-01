@@ -4,7 +4,7 @@ import requests
 import pandas
 import json
 from bokeh.plotting import figure
-from bokeh.models import ColumnDataSource, DataTable, CustomJS, CheckboxGroup, TableColumn, Div
+from bokeh.models import ColumnDataSource, DataTable, CustomJS, CheckboxGroup, TableColumn, Div, Select
 from bokeh.layouts import column, row
 from bokeh.models.tools import HoverTool
 from bokeh.embed import json_item
@@ -13,6 +13,7 @@ import random
 
 bz_link = 'https://transparency.entsog.eu/api/v1/balancingzones?limit=-1'
 points_link = 'https://transparency.entsog.eu/api/v1/Interconnections?limit=-1'
+operators_link = 'https://transparency.entsog.eu/api/v1/operators'
 
 
 def prepare_BZ_outlines(full_points_list):
@@ -325,13 +326,93 @@ def plot_ENTSOG_table():
     return json.dumps(json_item(layout, "mytable"))
 
 
+def load_points_names():
+    # Загрузка списков сопоставления пунктов
+    try:
+        ips = requests.get(points_link)
+        ips = json.loads(ips.text)
+        ips = pandas.DataFrame(ips['Interconnections'])
+    except Exception as E:
+        return 'Error loading points names', E
+    return ips[['pointLabel', 'pointKey']].drop_duplicates()
+
+
+def load_operators_names():
+    # Загрузка списков сопоставления операторов
+    try:
+        operators = requests.get(operators_link)
+        operators = json.loads(operators.text)
+        operators = pandas.DataFrame(operators['operators'])
+    except Exception as E:
+        return 'Error loading operator names', E
+    return operators[['operatorLabel', 'operatorKey']].drop_duplicates()
+
+
 def create_data_table(pandas_table):
+    # Подготовим табличку, заменим коды объёктов на их имена
+    points = load_points_names()
+    if not isinstance(points, tuple):
+        pandas_table = pandas.merge(pandas_table, points, on=['pointKey', 'pointKey'])
+        pandas_table = pandas_table.drop(columns=['pointKey'])
+    operators = load_operators_names()
+    if not isinstance(operators, tuple):
+        pandas_table = pandas.merge(pandas_table, operators, on=['operatorKey', 'operatorKey'])
+        pandas_table= pandas_table.drop(columns=['operatorKey'])
     # Создание таблицы Bokeh из таблицы Pandas
     source_table = ColumnDataSource(pandas_table)
+    original_source_table = ColumnDataSource(pandas_table)
     column_names = pandas_table.columns.values
     source_columns = [TableColumn(field=cname, title=cname) for cname in column_names]
     agrtable = DataTable(source=source_table, columns=source_columns)
-    layout = row(agrtable, sizing_mode='stretch_both')
+    combined_callback_code = """
+    var data = source.data;
+    var original_data = original_source.data;
+    var date = date_select_obj.value;
+    console.log("Date: " + date);
+    var indicator = indicator_select_obj.value;
+    console.log("Indicator: " + indicator);
+    var point = point_select_obj.value;
+    console.log("Point: " + point);
+    for (var key in original_data) {
+        data[key] = [];
+        for (var i = 0; i < original_data['periodFrom'].length; ++i) {
+            if ((date === "Все" || original_data['periodFrom'][i] === date) &&
+                (indicator === "Все" || original_data['indicator'][i] === indicator) &&
+                (point === "Все" || original_data['pointLabel'][i] === point)) {
+                data[key].push(original_data[key][i]);
+            }
+        }
+    }
+
+    source.change.emit();
+    target_obj.change.emit();
+    """
+
+    # define the filter widgets, without callbacks for now
+    date_list = ['Все'] + pandas_table['periodFrom'].drop_duplicates().tolist()
+    date_select = Select(title="Дата:", value=date_list[0], options=date_list)
+    indicator_list = ['Все'] + pandas_table['indicator'].drop_duplicates().tolist()
+    indicator_select = Select(title="Индикатор:", value=indicator_list[0], options=indicator_list)
+    point_list = ['Все'] + pandas_table['pointLabel'].drop_duplicates().tolist()
+    point_select = Select(title="Пункт:", value=point_list[0], options=point_list)
+
+    # now define the callback objects now that the filter widgets exist
+    generic_callback = CustomJS(
+        args=dict(source=source_table,
+                  original_source=original_source_table,
+                  date_select_obj=date_select,
+                  indicator_select_obj=indicator_select,
+                  point_select_obj=point_select,
+                  target_obj=agrtable),
+        code=combined_callback_code
+    )
+
+    # finally, connect the callbacks to the filter widgets
+    date_select.js_on_change('value', generic_callback)
+    indicator_select.js_on_change('value', generic_callback)
+    point_select.js_on_change('value', generic_callback)
+
+    layout = column(row(date_select, point_select, indicator_select), agrtable, sizing_mode='scale_both')
     return json.dumps(json_item(layout, "mytable"))
 
 

@@ -238,7 +238,7 @@ app.config['DEBUG'] = True
 if __name__ == '__main__':
     # run_update_checker()
     # breakpoint()
-    app.run(host='0.0.0.0', threaded=True)
+    # app.run(host='0.0.0.0', threaded=True)
     # Background process for sending email at designated time
     scheduler = BackgroundScheduler()
     scheduler.add_job(func=check_time_and_send_email, trigger='interval', minutes=5)
