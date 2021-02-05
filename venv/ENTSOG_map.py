@@ -357,7 +357,7 @@ def create_data_table(pandas_table):
     operators = load_operators_names()
     if not isinstance(operators, tuple):
         pandas_table = pandas.merge(pandas_table, operators, on=['operatorKey', 'operatorKey'])
-        pandas_table= pandas_table.drop(columns=['operatorKey'])
+        pandas_table = pandas_table.drop(columns=['operatorKey'])
     # Создание таблицы Bokeh из таблицы Pandas
     source_table = ColumnDataSource(pandas_table)
     original_source_table = ColumnDataSource(pandas_table)
@@ -389,11 +389,11 @@ def create_data_table(pandas_table):
     """
 
     # define the filter widgets, without callbacks for now
-    date_list = ['Все'] + pandas_table['periodFrom'].drop_duplicates().tolist()
+    date_list = ['Все'] + pandas_table['periodFrom'].drop_duplicates().sort_values().tolist()
     date_select = Select(title="Дата:", value=date_list[0], options=date_list)
     indicator_list = ['Все'] + pandas_table['indicator'].drop_duplicates().tolist()
     indicator_select = Select(title="Индикатор:", value=indicator_list[0], options=indicator_list)
-    point_list = ['Все'] + pandas_table['pointLabel'].drop_duplicates().tolist()
+    point_list = ['Все'] + pandas_table['pointLabel'].drop_duplicates().sort_values().tolist()
     point_select = Select(title="Пункт:", value=point_list[0], options=point_list)
 
     # now define the callback objects now that the filter widgets exist

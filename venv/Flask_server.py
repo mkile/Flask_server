@@ -225,7 +225,7 @@ def run_update_checker():
         print(last_check_date)
         return
     if last_check_date != now_str and now.hour < 6:
-        result = collect_and_compare_data(path_to_aux_db, nowstr)
+        result = collect_and_compare_data(path_to_aux_db)
         if isinstance(result, tuple):
             print(result)
         else:
@@ -236,8 +236,8 @@ app.config['SECRET_KEY'] = os.urandom(16)
 app.config['DEBUG'] = True
 
 if __name__ == '__main__':
+    # collect_and_compare_data(path_to_aux_db)
     # run_update_checker()
-    # breakpoint()
     # app.run(host='0.0.0.0', threaded=True)
     # Background process for sending email at designated time
     scheduler = BackgroundScheduler()
