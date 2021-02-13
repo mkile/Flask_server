@@ -83,73 +83,65 @@ a:hover{
   color: #0000FF;
 }
 
-
-
-/* Colors
-@white: #fff;
-@border: #9e9e9e;
-@text-color: @black;
-@black: #707070;
-@red: #0000FF;
-/* Settings
-@blip-speed: 0.35s;
-@blip-size: 375px;
-
-/* Mixins
-.blipTrans(@style: all) {
-  transition: @style 0.35s;
+.linear-activity {
+    overflow: hidden;
+    width: 98%;
+    height: 2px;
+    background-color: #B3E5FC;
+    margin: 20px auto;
 }
 
-@-webkit-keyframes pulse {
-  0%   { opacity: 0.8; }
-  50%  { opacity: 1; }
-  100% { opacity: 0.8; }
-}
-@-moz-keyframes pulse {
-  0%   { opacity: 0.8; }
-  50%  { opacity: 1; }
-  100% { opacity: 0.8; }
-}
-@-o-keyframes pulse {
-  0%   { opacity: 0.8; }
-  50%  { opacity: 1; }
-  100% { opacity: 0.8; }
-}
-@keyframes pulse {
-  0%   { opacity: 0.8; }
-  50%  { opacity: 1; }
-  100% { opacity: 0.8; }
+.determinate {
+    position: relative;
+    max-width: 100%;
+    height: 100%;
+    -webkit-transition: width 500ms ease-out 1s;
+       -moz-transition: width 500ms ease-out 1s;
+         -o-transition: width 500ms ease-out 1s;
+            transition: width 500ms ease-out 1s;
+    background-color: #03A9F4;
 }
 
-a {
-  text-decoration: none;
-  .blipTrans();
-  display: block;
-  margin: 0 auto 50px;
-  position: relative;
-  background: #fff;
-  border: 1px solid #9e9e9e;
-  color: #707070;
-  padding: 20px 50px;
-  overflow: hidden;
-  max-width: 500px;
-
-  .link-content {
-    z-index: 3;
-    .blipTrans(@style: color);
-    font-weight: 300;
-  }
+.indeterminate {
+    position: relative;
+    width: 100%;
+    height: 100%;
 }
 
-.button.two {
-  background-color: darken(#fff, 5%);
-  animation: pulse 4s infinite;
-  animation-timing-function: linear;
-
-  &:hover {
-    background-color: #707070;
-    color: #fff;
-    .link-content {color: #fff;}
-  }
+.indeterminate:before {
+    content: '';
+    position: absolute;
+    height: 100%;
+    background-color: #03A9F4;
+    animation: indeterminate_first 1.5s infinite ease-out;
 }
-*/
+
+.indeterminate:after {
+    content: '';
+    position: absolute;
+    height: 100%;
+    background-color: #4FC3F7;
+    animation: indeterminate_second 1.5s infinite ease-in;
+}
+
+@keyframes indeterminate_first {
+    0% {
+        left: -100%;
+        width: 100%;
+    }
+    100% {
+        left: 100%;
+        width: 10%;
+    }
+}
+
+@keyframes indeterminate_second {
+    0% {
+        left: -150%;
+        width: 100%;
+    }
+    100% {
+        left: 100%;
+        width: 10%;
+    }
+}

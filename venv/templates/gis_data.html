@@ -7,10 +7,17 @@
 </head>
 <body>
   <h1> Граф взаимосвязи объектов ENTSOG </h1>
+  <div class="linear-activity" style="display:block;">
+    <div class="indeterminate"></div>
+  </div>
   <div id="myplot"></div>
   <script>
   fetch('/gis_data_plot')
-    .then(function(response) { return response.json() })
+    .then(function(response)
+    {
+      document.getElementsByClassName('linear-activity')[0].style.display = 'none';
+      return response.json()
+    })
     .then(function(item) { return Bokeh.embed.embed_item(item) })
   </script>
   <br>

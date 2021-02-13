@@ -289,10 +289,10 @@ def plot_ENTSOG_table():
     bz = requests.get(bz_link)
     agr_ic = requests.get(points_link)
     pdbz = pandas.DataFrame(json.loads(bz.text)['balancingzones'])
-    pdbz = pdbz.drop_duplicates()
+    pdbz = pdbz.drop_duplicates().fillna('-')
 
     pdagr = pandas.DataFrame(json.loads(agr_ic.text)['Interconnections'])
-    pdagr = pdagr.drop_duplicates()
+    pdagr = pdagr.drop_duplicates().fillna('-')
     # Work with bokeh
 
     balance_zones = ColumnDataSource(pdbz)
@@ -320,7 +320,8 @@ def plot_ENTSOG_table():
     pdagrdatatable = DataTable(source=points, columns=pdcolumns)
     pd_text = Div(text='<h2>Список пунктов</h2>')
 
-    layout = row(column(bz_text, bzdatatable), column(children=[pd_text, pdagrdatatable], sizing_mode='stretch_both'),
+    layout = row(column(children=[bz_text, bzdatatable]),
+                 column(children=[pd_text, pdagrdatatable]),
                  sizing_mode='scale_both')
 
     # return json
