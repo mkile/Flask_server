@@ -102,7 +102,8 @@ def entsog_table_plot():
 def changed_data():
     if not session.get('logged_in'):
         return render_template('login.html')
-    return render_template('changed_data.html', resources=CDN.render())
+    return render_template('changed_data.html', resources=CDN.render(),
+                           last_updated=load_settings('last_check_date'))
 
 
 @app.route('/fgsz', methods=['POST', 'GET'])
@@ -225,18 +226,18 @@ def run_update_checker():
         print(last_check_date)
         return
     if last_check_date != now_str and now.hour < 6:
-        result = collect_and_compare_data(path_to_aux_db)
+        result = collect_and_compare_data(path_to_aux_db, now_str)
         if isinstance(result, tuple):
             print(result)
         else:
-            save_settings('last_check_date', now_str)
+            save_settings('last_check_date', now)
 
 
 app.config['SECRET_KEY'] = os.urandom(16)
 app.config['DEBUG'] = True
 
 if __name__ == '__main__':
-    # collect_and_compare_data(path_to_aux_db)
+    # collect_and_compare_data(path_to_aux_db, datetime.now())
     # run_update_checker()
     # app.run(host='0.0.0.0', threaded=True)
     # Background process for sending email at designated time

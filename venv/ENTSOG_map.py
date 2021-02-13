@@ -9,6 +9,7 @@ from bokeh.layouts import column, row
 from bokeh.models.tools import HoverTool
 from bokeh.embed import json_item
 from scipy.spatial import ConvexHull
+from bokeh.palettes import Spectral3
 import random
 
 bz_link = 'https://transparency.entsog.eu/api/v1/balancingzones?limit=-1'
@@ -350,6 +351,9 @@ def load_operators_names():
 
 def create_data_table(pandas_table):
     # Подготовим табличку, заменим коды объёктов на их имена
+    cols = list(pandas_table.columns)
+    cols = cols[-1:] + cols[0:-1]
+    pandas_table = pandas_table[cols]
     points = load_points_names()
     if not isinstance(points, tuple):
         pandas_table = pandas.merge(pandas_table, points, on=['pointKey', 'pointKey'])
@@ -363,7 +367,7 @@ def create_data_table(pandas_table):
     original_source_table = ColumnDataSource(pandas_table)
     column_names = pandas_table.columns.values
     source_columns = [TableColumn(field=cname, title=cname) for cname in column_names]
-    agrtable = DataTable(source=source_table, columns=source_columns)
+    agrtable = DataTable(source=source_table, columns=source_columns, height=500, width=1000)
     combined_callback_code = """
     var data = source.data;
     var original_data = original_source.data;
@@ -412,7 +416,34 @@ def create_data_table(pandas_table):
     indicator_select.js_on_change('value', generic_callback)
     point_select.js_on_change('value', generic_callback)
 
-    layout = column(row(date_select, point_select, indicator_select), agrtable, sizing_mode='scale_both')
+    # add graph to visualise changed amounts by date and indicator
+    plot_data = pandas_table.groupby(['periodFrom', 'indicator']).size().reset_index(name='Counts')
+    dates = plot_data['periodFrom'].drop_duplicates().sort_values()
+    indicators = plot_data['indicator'].drop_duplicates().sort_values().tolist()
+    plot_data = {x: plot_data.loc[plot_data.indicator == x][['periodFrom', 'Counts']]
+                 for x in indicators}
+    plot_data = {y: pandas.merge(dates, plot_data[y], on=['periodFrom', 'periodFrom'],
+                                 how='outer')['Counts'].fillna(0).astype('int32').tolist() for y in indicators}
+    plot_data['x'] = dates
+
+    colors = ["#6c8c30", "#306c8c", "#736648", "#e79e3d"]
+
+    plot = figure(x_range=dates, plot_height=400, plot_width=800,
+                  title="Количество изменений по суткам",
+                  toolbar_location=None, tools="hover", tooltips="$name: @$name")
+    plot.vbar_stack(indicators, width=0.9, x='x', source=plot_data,
+                    legend_label=indicators, color=colors)
+    plot.y_range.start = 0
+    plot.xaxis.major_label_orientation = 0.9
+    plot.x_range.range_padding = 0.1
+    plot.xgrid.grid_line_color = None
+    plot.axis.minor_tick_line_color = None
+    plot.outline_line_color = None
+    plot.legend.location = "top_left"
+    plot.legend.orientation = "horizontal"
+
+    layout = column(row(date_select, point_select, indicator_select),
+                    agrtable, plot, sizing_mode='stretch_width')
     return json.dumps(json_item(layout, "mytable"))
 
 

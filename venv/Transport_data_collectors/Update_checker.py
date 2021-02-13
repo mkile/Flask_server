@@ -28,25 +28,31 @@ def disconnect_from_db(connection):
 def load_data(connection, date, table='saveddata'):
     # Procedure for loading settings
     # DB contains table settings with two text fields: parameter and value
+    if table == 'newdata':
+        saveddata = ',savedate'
+    else:
+        saveddata = ''
     request = "select periodfrom,indicator,pointkey,operatorkey,directionkey," \
-              "lastUpdateDateTime from {} where periodfrom like '{}'".format(table, date)
+              "lastUpdateDateTime {} from {} where periodfrom like '%{}%'".format(saveddata, table, date)
     result = connection.execute(request).fetchall()
     return result
 
 
-def save_all_data(data, connection, type):
+def save_all_data(data, connection, type_, today):
     # Допишем новые данные
-    if type == 'saveddata':
+    if type_ == 'saveddata':
         data = [tuple(x) for x in data.values]
         # Удалим старые данные
         connection.execute("delete from saveddata")
         connection.executemany("insert into saveddata values (?, ?, ?, ?, ?, ?)", data)
     else:
+        data['savedate'] = str(today.strftime('%d.%m.%Y'))
         data = [tuple(x) for x in data.values]
         # Удалим старые данные
-        request = "delete from newdata"
+        request = "delete from newdata where savedate='{}'"\
+            .format(str((today - timedelta(days=10)).strftime('%d.%m.%Y')))
         connection.execute(request)
-        connection.executemany("insert into newdata values (?, ?, ?, ?, ?, ?)", data)
+        connection.executemany("insert into newdata values (?, ?, ?, ?, ?, ?, ?)", data)
     connection.commit()
 
 
@@ -62,25 +68,30 @@ def collect_new_ENTSOG_data(columns):
     return datatable
 
 
-def collect_and_compare_data(path_to_db):
+def collect_and_compare_data(path_to_db, today):
     columns = ['periodFrom', 'indicator', 'pointKey', 'operatorKey', 'directionKey', 'lastUpdateDateTime']
     # types = ['string', 'string', 'string', 'string', 'string', 'string']
     # dtype = {name_: type_ for name_ in columns for type_ in types}
     new_data = collect_new_ENTSOG_data(columns)
+    new_data = new_data.drop_duplicates()
     dates = new_data[columns[0]].drop_duplicates().tolist()
+    dates.sort()
     connection = connect_to_db(path_to_db)
     # Check if connection was successfully established
     if isinstance(connection, tuple):
         return connection
     updated_data = pandas.DataFrame(columns=columns)
+    # new_data.to_csv('xls/new_data_all.csv')
     for date in dates:
         old_data = pandas.DataFrame(load_data(connection, date), columns=columns)
-        test_data = new_data.loc[new_data[columns[0]] == date]
+        # old_data.to_excel('xls/old_data {}.xls'.format(date.replace(':', '')))
+        test_data = new_data[new_data[columns[0]].str.contains(date)]
         changed_data = test_data.append(old_data).drop_duplicates(keep=False)
         if len(changed_data) > 0:
             updated_data = updated_data.append(changed_data)
-    save_all_data(new_data, connection, 'saveddata')
-    save_all_data(updated_data, connection, 'newdata')
+    if len(new_data) > 0:
+        save_all_data(new_data, connection, 'saveddata', today)
+    save_all_data(updated_data, connection, 'newdata', today)
     disconnect_from_db(connection)
     return
 
@@ -90,11 +101,11 @@ def get_updated_data(path_to_db):
     # Check if connection was successfully established
     if isinstance(connection, tuple):
         return connection
-    columns = ['periodFrom', 'indicator', 'pointKey', 'operatorKey', 'directionKey', 'lastUpdateDateTime']
-    updated_data = pandas.DataFrame(load_data(connection, '%','newdata'), columns=columns)
+    columns = ['periodFrom', 'indicator', 'pointKey', 'operatorKey', 'directionKey', 'lastUpdateDateTime', 'savedate']
+    updated_data = pandas.DataFrame(load_data(connection, '%', 'newdata'), columns=columns)
     # return updated_data.to_html(index=False, decimal=',')
     return updated_data
 
 
 if __name__ == "__main__":
-    print(collect_and_compare_data('data.db'))
+    print(collect_and_compare_data('data.db', datetime.now()))
