@@ -10,7 +10,7 @@ default_link = 'https://transparency.entsog.eu/api/v1/operationalData.csv?forceD
                'delimiter=comma&from={}&to={}&indicator=' \
                'Renomination,Allocation,Physical%20Flow,GCV&periodType=day&' \
                'timezone=CET&periodize=0&limit=-1&isTransportData=true&dataset=1'
-data_depth = 10
+data_depth = 30
 
 
 def connect_to_db(connection_path):
@@ -50,7 +50,7 @@ def save_all_data(data, connection, type_, today):
         data = [tuple(x) for x in data.values]
         # Удалим старые данные
         request = "delete from newdata where savedate='{}'"\
-            .format(str((today - timedelta(days=10)).strftime('%d.%m.%Y')))
+            .format(str((today - timedelta(days=data_depth)).strftime('%d.%m.%Y')))
         connection.execute(request)
         connection.executemany("insert into newdata values (?, ?, ?, ?, ?, ?, ?)", data)
     connection.commit()
@@ -65,6 +65,7 @@ def collect_new_ENTSOG_data(columns):
         end_date = (today - timedelta(days=currDay)).strftime('%Y-%m-%d')
         link = default_link.format(start_date, end_date)
         datatable = datatable.append(tpc.get_excel_data(link)[columns])
+    print('All data collected.')
     return datatable
 
 

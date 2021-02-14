@@ -225,8 +225,8 @@ def run_update_checker():
     if isinstance(last_check_date, tuple):
         print(last_check_date)
         return
-    if last_check_date != now_str and now.hour < 6:
-        result = collect_and_compare_data(path_to_aux_db, now_str)
+    if last_check_date != now_str and now.hour < 11:
+        result = collect_and_compare_data(path_to_aux_db, now)
         if isinstance(result, tuple):
             print(result)
         else:
@@ -242,7 +242,7 @@ if __name__ == '__main__':
     # app.run(host='0.0.0.0', threaded=True)
     # Background process for sending email at designated time
     scheduler = BackgroundScheduler()
-    scheduler.add_job(func=check_time_and_send_email, trigger='interval', minutes=5)
+    # scheduler.add_job(func=check_time_and_send_email, trigger='interval', minutes=5)
     scheduler.add_job(func=run_update_checker, trigger='interval', hours=1)
     scheduler.start()
     # serve app
