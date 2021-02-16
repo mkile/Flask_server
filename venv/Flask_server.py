@@ -126,6 +126,15 @@ def fgsz_page():
         end_date = request.form['end_date']
         if 'xls' in request.form['action']:
             data = get_FGSZ_vr_data(start_date, end_date, True)
+            if data[2] == '#error#':
+                return render_template('data.html',
+                                       title='Данные по виртуальному реверсу с сайта FGSZ',
+                                       vr_data=data,
+                                       updated=get_updated(),
+                                       need_dynamic=True,
+                                       max_date=today,
+                                       start_date_html=today,
+                                       end_date_html=today)
             resp = make_response(data)
             resp.headers["Content-Disposition"] = "attachment; " \
                                                   "filename=exportdata{}-{}".format(
@@ -230,7 +239,7 @@ def run_update_checker():
         if isinstance(result, tuple):
             print(result)
         else:
-            save_settings('last_check_date', now)
+            save_settings('last_check_date', now_str)
 
 
 app.config['SECRET_KEY'] = os.urandom(16)

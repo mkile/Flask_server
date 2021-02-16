@@ -11,29 +11,13 @@ from dateutil.parser import parse
 import io
 
 # Данные
-Suffixes =['V', 'G']
+Suffixes = ['V', 'G']
 link_template = 'https://transparency.entsog.eu/api/v1/operationalData?periodType=day&pointDirection=' \
                 '{}&from={}&to={}&indicator={}&timezone=CET&periodize=0&sort=PeriodFrom&limit=-1'
 indicator_list = ['Allocation', 'GCV', 'Renomination']
 
 
-def Data_dispatcher():
-    #Диспетчера запроса данных
-    #запрос калорийности
-    time = datetime.now()
-    if (time.hour == 7) and (time.minute > 30):
-        get_and_send_GCV_data
-    else:
-        print("[%s]: Время для запроса калорийности не соответствует" % str(time))
-    #запрос виртуального реверса
-    vr_date = time.strftime('%Y-%m-%d')
-    print('Последняя дата: ' + last_date)
-    print('Текущая дата: ' + vr_date)
-    if (now.hour >= 15) and last_date != vr_date:
-        get_ENTSOG_vr_data()
-
-
-def get_ENTSOG_vr_data(settings, email = False):
+def get_ENTSOG_vr_data(settings, email=False):
     # Timedelta for dates
     delta = 2
     # List of points for reverse calculation
@@ -47,159 +31,160 @@ def get_ENTSOG_vr_data(settings, email = False):
 
     now = datetime.now()
     date_from = (datetime(now.year, now.month, now.day) - timedelta(days=delta)).strftime('%Y-%m-%d')
-    date_mid = (datetime(now.year, now.month, now.day) - timedelta(days=1)).strftime('%Y-%m-%d')
+    # date_mid = (datetime(now.year, now.month, now.day) - timedelta(days=1)).strftime('%Y-%m-%d')
     date_to = (datetime(now.year, now.month, now.day)).strftime('%Y-%m-%d')
-    #Allocation Data Recieve
+    # Allocation Data Recieve
     stringio.write('<h3>Протокол обновления данных</h3>')
     stringio.write('<textarea rows="10" cols="100">')
     stringio.write(f"Getting {indicator_list[0]} data for {str(date_from)} " + br)
-    Aldata = pandas.DataFrame()
+    aldata = pandas.DataFrame()
     for point in points_list:
         link = link_template.format(point, date_from, date_to, indicator_list[0])
         stringio.write(link + br)
-        Aldata = Aldata.append(getandprocessJSONdataENTSOG(link))
-    Aldata = Aldata.sort_values('date')
-    #GCV Data Recieve
+        aldata = aldata.append(getandprocessJSONdataENTSOG(link))
+    aldata = aldata.sort_values('date')
+    # GCV Data Recieve
     stringio.write(br + f"Getting {indicator_list[1]} data for {str(date_from)} " + br)
-    GCVData = pandas.DataFrame()
+    gcv_data = pandas.DataFrame()
     for point in points_list:
         link = link_template.format(point, date_from, date_to, indicator_list[1])
         stringio.write(link + br)
-        GCVData = GCVData.append(getandprocessJSONdataENTSOG(link))
-    GCVData = GCVData.sort_values('date')
+        gcv_data = gcv_data.append(getandprocessJSONdataENTSOG(link))
+    gcv_data = gcv_data.sort_values('date')
     # Renomination Data Recieve
     stringio.write(br + f"Getting {indicator_list[2]} data for {str(date_from)}" + br)
-    RenData = pandas.DataFrame()
+    ren_data = pandas.DataFrame()
     for point in points_list:
         link = link_template.format(point, date_from, date_to, indicator_list[2])
         stringio.write(link + br)
-        RenData = RenData.append(getandprocessJSONdataENTSOG(link))
-    RenData = RenData.sort_values('date')
-    #Output collected data separately
+        ren_data = ren_data.append(getandprocessJSONdataENTSOG(link))
+    ren_data = ren_data.sort_values('date')
+    # Output collected data separately
     stringio.write('</textarea>')
     stringio.write("<p><h2>Данные по калорийности</h2>")
-    stringio.write(GCVData.to_html(index=False, decimal=','))
+    stringio.write(gcv_data.to_html(index=False, decimal=','))
     stringio.write("<p><h2>Данные по аллокациям</h2>")
-    stringio.write(Aldata.to_html(index=False, decimal=','))
+    stringio.write(aldata.to_html(index=False, decimal=','))
     stringio.write("<p><h2>Данные по реноминациям</h2>")
-    stringio.write(RenData.to_html(index=False, decimal=','))
+    stringio.write(ren_data.to_html(index=False, decimal=','))
     # join tables
-    Vdata = pandas.merge(RenData, GCVData, left_on=['date', 'point'], right_on=['date', 'point'], how='outer')
-    Vdata = Vdata.sort_values(['point', 'date'], ascending=True)
-    Vdata = Vdata.fillna(method='ffill')
-    Vdata = Vdata.sort_values(['date', 'point'], ascending=True)
-    Vdata = pandas.merge(Vdata, Aldata, left_on=['date', 'point'], right_on=['date', 'point'], how='outer')
-    #calculate m3
-    Vdata['Allocation_M3'] = Vdata['Allocation'] / Vdata['GCV'] / 10 ** 6 * 1.0738
-    Vdata['Renomination_M3'] = Vdata['Renomination'] / Vdata['GCV'] / 10 ** 6 * 1.0738
-    #sort and convert date to text
-    Vdata = Vdata.sort_values(by='date')
-    Vdata['date'] = Vdata['date'].apply(lambda x:  parse(x, ignoretz=True).strftime('%Y-%m-%d'))
+    vdata = pandas.merge(ren_data, gcv_data, left_on=['date', 'point'], right_on=['date', 'point'], how='outer')
+    vdata = vdata.sort_values(['point', 'date'], ascending=True)
+    vdata = vdata.fillna(method='ffill')
+    vdata = vdata.sort_values(['date', 'point'], ascending=True)
+    vdata = pandas.merge(vdata, aldata, left_on=['date', 'point'], right_on=['date', 'point'], how='outer')
+    # calculate m3
+    vdata['Allocation_M3'] = vdata['Allocation'] / vdata['GCV'] / 10 ** 6 * 1.0738
+    vdata['Renomination_M3'] = vdata['Renomination'] / vdata['GCV'] / 10 ** 6 * 1.0738
+    # sort and convert date to text
+    vdata = vdata.sort_values(by='date')
+    vdata['date'] = vdata['date'].apply(lambda x: parse(x, ignoretz=True).strftime('%Y-%m-%d'))
     # Clear unnecessary variables
-    del RenData
-    del GCVData
-    del Aldata
+    del ren_data
+    del gcv_data
+    del aldata
     # <Make date filter
     filter_d_2 = (datetime(now.year, now.month, now.day) - timedelta(days=2)).strftime('%Y-%m-%d')
     filter_d_1 = (datetime(now.year, now.month, now.day) - timedelta(days=1)).strftime('%Y-%m-%d')
     filter_d = (datetime(now.year, now.month, now.day)).strftime('%Y-%m-%d')
     # Get data
-    Al_d_2pd = filter_df(Vdata, filter_d_2, 'date')
-    Al_d_1pd = filter_df(Vdata, filter_d_1, 'date')
-    Ren_dpd = filter_df(Vdata, filter_d, 'date')
+    al_d_2pd = filter_df(vdata, filter_d_2, 'date')
+    al_d_1pd = filter_df(vdata, filter_d_1, 'date')
+    ren_dpd = filter_df(vdata, filter_d, 'date')
     # Get points list
-    points = Al_d_1pd.append(Al_d_2pd)
-    points = [*set(points.append(Ren_dpd)['point'].to_list())]
-    Al_d_1 = []
-    Al_d_2 = []
-    Ren_d = []
-    #check if necessary values is not none and if necessary replace allocation with renomination
+    points = al_d_1pd.append(al_d_2pd)
+    points = [*set(points.append(ren_dpd)['point'].to_list())]
+    al_d_1 = []
+    al_d_2 = []
+    ren_d = []
+    # check if necessary values is not none and if necessary replace allocation with renomination
     for point in points:
         comment += add_table_row(f'Сбор данных для пункта {point}.')
-        Al_d_2_value = filter_df(Al_d_2pd, point, 'point')['Allocation_M3'].sum()
-        Al_d_1_value = filter_df(Al_d_1pd, point, 'point')['Allocation_M3'].sum()
-        Ren_d_value = filter_df(Ren_dpd, point, 'point')['Renomination_M3'].sum()
-        if Al_d_2_value == 0:
+        al_d_2_value = filter_df(al_d_2pd, point, 'point')['Allocation_M3'].sum()
+        al_d_1_value = filter_df(al_d_1pd, point, 'point')['Allocation_M3'].sum()
+        ren_d_value = filter_df(ren_dpd, point, 'point')['Renomination_M3'].sum()
+        if al_d_2_value == 0:
             comment += add_table_row(f'Аллокация для Д-2 отсутствует, для пункта {point} используем реноминацию.')
-            Al_d_2_value = filter_df(filter_df(Vdata,
+            al_d_2_value = filter_df(filter_df(vdata,
                                                filter_d_2,
                                                'date'), point, 'point')['Renomination_M3'].sum()
-            if Al_d_2_value == 0:
+            if al_d_2_value == 0:
                 comment += add_table_row('Реноминация за Д-2 отсутствует, или равна 0.')
-        if Al_d_1_value == 0:
+        if al_d_1_value == 0:
             comment += add_table_row('Аллокация для Д-1 отсутствует, используем реноминацию.')
-            Al_d_1_value = filter_df(filter_df(Vdata,
+            al_d_1_value = filter_df(filter_df(vdata,
                                                filter_d_1,
                                                'date'), point, 'point')['Renomination_M3'].sum()
-            if Al_d_1_value == 0:
+            if al_d_1_value == 0:
                 comment += add_table_row('Реноминация за Д-1 отсутствует или равна 0.')
                 comment += add_table_row(error_msg)
-        if Ren_d_value == 0:
+        if ren_d_value == 0:
             comment += add_table_row('Реноминация для Д отсутствует или равна 0.')
             comment += add_table_row(error_msg)
         if error_msg in comment:
             comment += add_table_row('Часть данных равна 0, возможен некорректный результат')
-        Al_d_1.append(Al_d_1_value)
-        Al_d_2.append(Al_d_2_value)
-        Ren_d.append(Ren_d_value)
+        al_d_1.append(al_d_1_value)
+        al_d_2.append(al_d_2_value)
+        ren_d.append(ren_d_value)
     # Write data table to string buffer
     stringio.write('<h2>Таблица данных для расчёта</h2>')
-    stringio.write(Vdata.to_html(index=False, decimal=','))
+    stringio.write(vdata.to_html(index=False, decimal=','))
     # Рассчитаем показатели и выгрузим результат
-    Summary_by_type = {}
-    Summary_by_type['d-2-8'] = 0
-    Summary_by_type['d-1-8'] = 0
-    Summary_by_type['d-2-10'] = 0
-    Summary_by_type['d-1-10'] = 0
+    summary_by_type = {'d-2-8': 0, 'd-1-8': 0, 'd-2-10': 0, 'd-1-10': 0}
     in_for = 'В формате '
     for index, point in enumerate(points):
-        Al_d_2_8 = Al_d_2[index]
-        Summary_by_type['d-2-8'] += Al_d_2_8
-        Al_d_1_8 = Al_d_1[index]
-        Summary_by_type['d-1-8'] += Al_d_1_8
-        Al_d_1_10 = Al_d_1_8 / 24 * 21 + Ren_d[index] / 24 * 3
-        Summary_by_type['d-1-10'] += Al_d_1_10
-        Al_d_2_10 = Al_d_2[index] / 24 * 21 + Al_d_1[index] / 24 * 3
-        Summary_by_type['d-2-10'] += Al_d_2_10
+        al_d_2_8 = al_d_2[index]
+        summary_by_type['d-2-8'] += al_d_2_8
+        al_d_1_8 = al_d_1[index]
+        summary_by_type['d-1-8'] += al_d_1_8
+        al_d_1_10 = al_d_1_8 / 24 * 21 + ren_d[index] / 24 * 3
+        summary_by_type['d-1-10'] += al_d_1_10
+        al_d_2_10 = al_d_2[index] / 24 * 21 + al_d_1[index] / 24 * 3
+        summary_by_type['d-2-10'] += al_d_2_10
         stringio.write(add_html_line(f'<br><p><h1>Данные по виртуальному реверсу через ГИС {point}:</h1>'))
         stringio.write(add_html_line(in_for + '07-07 за {} - {:.3f}'.format(turn_date(filter_d_1),
-                                                                            round_half_up(Al_d_1_8, 3))))
+                                                                            round_half_up(al_d_1_8, 3))))
         stringio.write(add_html_line(in_for + '10-10 за {} - {:.3f}'.format(turn_date(filter_d_1),
-                                                                            round_half_up(Al_d_1_10, 3))))
+                                                                            round_half_up(al_d_1_10, 3))))
         stringio.write(add_html_line(in_for + '07-07 за {} - {:.3f}'.format(turn_date(filter_d_2),
-                                                                            round_half_up(Al_d_2_8, 3))))
+                                                                            round_half_up(al_d_2_8, 3))))
         stringio.write(add_html_line(in_for + '10-10 за {} - {:.3f}'.format(turn_date(filter_d_2),
-                                                                            round_half_up(Al_d_2_10, 3))))
+                                                                            round_half_up(al_d_2_10, 3))))
     # Если отправляем сообщение, то оставляем только итог
-    if email == True:
+    if email:
         stringio = io.StringIO()
 
     # Запишем суммарные данные по всем ГИС
     stringio.write(add_html_line('<br><p><h1>Суммарные данные по виртуальному реверсу:</h1>'))
     stringio.write(add_html_line(in_for + '07-07 за {} - {:.3f}'.format(turn_date(filter_d_1),
-                                                                        round_half_up(Summary_by_type['d-1-8'], 3))))
+                                                                        round_half_up(summary_by_type['d-1-8'], 3))))
     stringio.write(add_html_line(in_for + '10-10 за {} - {:.3f}'.format(turn_date(filter_d_1),
-                                                                        round_half_up(Summary_by_type['d-1-10'], 3))))
+                                                                        round_half_up(summary_by_type['d-1-10'], 3))))
     stringio.write(add_html_line(in_for + '07-07 за {} - {:.3f}'.format(turn_date(filter_d_2),
-                                                                        round_half_up(Summary_by_type['d-2-8'], 3))))
+                                                                        round_half_up(summary_by_type['d-2-8'], 3))))
     stringio.write(add_html_line(in_for + '10-10 за {} - {:.3f}'.format(turn_date(filter_d_2),
-                                                                        round_half_up(Summary_by_type['d-2-10'], 3))))
+                                                                        round_half_up(summary_by_type['d-2-10'], 3))))
     # Если есть ошибки, то выгрузим протокол
-    if len(comment) > 0 and email == False:
+    if len(comment) > 0 and not email:
         stringio.write('<br><h3>Ошибки загрузки данных.</h3>')
         stringio.write('<table class="errortable"> <tbody>')
         stringio.write(comment.replace(error_msg, 'Внимание !'))
         stringio.write('</tbody></table>')
     return stringio.getvalue()
 
+
 # This one is obsolete
 def get_and_send_GCV_data():
-# Если время отправки калорийности наступило
+    # Если время отправки калорийности наступило
     date1 = (datetime(now.year, now.month, now.day) - timedelta(days=2)).strftime('%Y-%m-%d')
     date2 = (datetime(now.year, now.month, now.day)).strftime('%Y-%m-%d')
     print("Getting data for ", str(date1))
-    link1 = 'https://transparency.entsog.eu/api/v1/operationalData?forceDownload=true&pointDirection=pl-tso-0001itp-00104entry&from=' + date1 + '&to=' + date2 + '&indicator=GCV&periodType=day&timezone=CET&limit=10&dataset=1'
-    link2 = 'https://transparency.entsog.eu/api/v1/operationalData?forceDownload=true&pointDirection=sk-tso-0001itp-00117entry&from=' + date1 + '&to=' + date2 + '&indicator=GCV&periodType=day&timezone=CET&limit=10&dataset=1'
+    link1 = 'https://transparency.entsog.eu/api/v1/operationalData?forceDownload=' \
+            'true&pointDirection=pl-tso-0001itp-00104entry&from=' + date1 + '&to=' \
+            + date2 + '&indicator=GCV&periodType=day&timezone=CET&limit=10&dataset=1'
+    link2 = 'https://transparency.entsog.eu/api/v1/operationalData?forceDownload=' \
+            'true&pointDirection=sk-tso-0001itp-00117entry&from=' + date1 + '&to=' \
+            + date2 + '&indicator=GCV&periodType=day&timezone=CET&limit=10&dataset=1'
     res1 = getJSONdata(link1)
     res2 = getJSONdata(link2)
     try:
@@ -225,6 +210,7 @@ def get_and_send_GCV_data():
     except Exception as e:
         print("Error sending ", e)
     return
+
 
 if __name__ == "__main__":
     get_ENTSOG_vr_data(['sk-tso-0001itp-00421exit'])

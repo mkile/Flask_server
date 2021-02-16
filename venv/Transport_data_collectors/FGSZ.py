@@ -6,37 +6,21 @@ from tabulate import tabulate
 from Transport_data_collectors.common import filter_df, turn_date, round_half_up
 import io
 
-class Parameter():
+
+class Parameter:
     code = 1
     name = 2
 
 
-
-class FGSZDataDesc():
-    FirmTechnical = {}
-    FirmTechnical[Parameter.code] = 5
-    FirmTechnical[Parameter.name] = 'TechnicalCapacityFirm'
-    GCV20 = {}
-    GCV20[Parameter.code] = 15
-    GCV20[Parameter.name] = 'MeasuredGCV'
-    InterruptedCapacity = {}
-    InterruptedCapacity[Parameter.code] = 17
-    InterruptedCapacity[Parameter.name] = 'InterruptedCapacity'
-    InterruptedBookedCapacity = {}
-    InterruptedBookedCapacity[Parameter.code] = 18
-    InterruptedBookedCapacity[Parameter.name] = 'InterruptedBookedCapacity'
-    Nomination = {}
-    Nomination[Parameter.code] = 20
-    Nomination[Parameter.name] = 'NominatedCapacity'
-    PhysicalFlowKwh = {}
-    PhysicalFlowKwh[Parameter.code] = 26
-    PhysicalFlowKwh[Parameter.name] = 'AllocatedGasFlowCapacity'
-    AllocationKwh = {}
-    AllocationKwh[Parameter.code] = 24
-    AllocationKwh[Parameter.name] = 'AllocatedCapacity'
-    RenominationKwh = {}
-    RenominationKwh[Parameter.code] = 22
-    RenominationKwh[Parameter.name] = 'RenominatedCapacity'
+class FGSZDataDesc:
+    FirmTechnical = {Parameter.code: 5, Parameter.name: 'TechnicalCapacityFirm'}
+    GCV20 = {Parameter.code: 15, Parameter.name: 'MeasuredGCV'}
+    InterruptedCapacity = {Parameter.code: 17, Parameter.name: 'InterruptedCapacity'}
+    InterruptedBookedCapacity = {Parameter.code: 18, Parameter.name: 'InterruptedBookedCapacity'}
+    Nomination = {Parameter.code: 20, Parameter.name: 'NominatedCapacity'}
+    PhysicalFlowKwh = {Parameter.code: 26, Parameter.name: 'AllocatedGasFlowCapacity'}
+    AllocationKwh = {Parameter.code: 24, Parameter.name: 'AllocatedCapacity'}
+    RenominationKwh = {Parameter.code: 22, Parameter.name: 'RenominatedCapacity'}
 
 
 def get_FGSZ_data(request_type, data=()):
@@ -57,13 +41,14 @@ def get_FGSZ_data(request_type, data=()):
                '{"property":"unit","comparison":"eq","value":"kwh"},'
                '{"property":"dimValueTypeId","comparison":"in","values":[%s]}]}']
     links = ['https://ipnew.rbp.eu/Fgsz.Tso.Data.Web/api/TsoData/GetDimNetworkPointList',
-           'https://ipnew.rbp.eu/Fgsz.Tso.Data.Web/api/TsoData/GetFactDailySetList']
+             'https://ipnew.rbp.eu/Fgsz.Tso.Data.Web/api/TsoData/GetFactDailySetList']
     if request_type > 0:
         payload[request_type] = payload[request_type] % data
     return requests.post(
         url=links[request_type], data=payload[request_type],
         headers=header
     )
+
 
 def process_json_data(json_text, headers, indicator):
     # Процедура обработки загруженных данных
@@ -80,9 +65,10 @@ def process_json_data(json_text, headers, indicator):
             print('В строке за %s нет значения' % line['gasPeriod'])
     return pandas.DataFrame(result, columns=headers)
 
+
 def get_FGSZ_vr_data(start_date=None, end_date=None, output_xls=False):
     # Процедура получения данных за период и выгрузки в файл.
-    if start_date == None or end_date == None:
+    if start_date is None or end_date is None:
         # Если данных по требуемому периоду дат нет, то подготовим даты с текущей по Д-2
         end_date = datetime.datetime.now().strftime('%Y-%m-%d')
         mid_date = (datetime.datetime.now() - datetime.timedelta(days=1)).strftime('%Y-%m-%d')
@@ -94,7 +80,10 @@ def get_FGSZ_vr_data(start_date=None, end_date=None, output_xls=False):
 
     # Получим список пунктов у которых в названии есть vip и
     # выберем их ID для направлений OUT и IN
-    points_json = json.loads(get_FGSZ_data(0).text)['data']
+    try:
+        points_json = json.loads(get_FGSZ_data(0).text)['data']
+    except:
+        return start_date, end_date, '#error#', 'Ошибка загрузки данных с сайта FGSZ'
     for point in points_json:
         if point['direction'] == 'OUT' and 'Bereg' in point['name']:
             id_out = str(point['id'])
@@ -104,7 +93,7 @@ def get_FGSZ_vr_data(start_date=None, end_date=None, output_xls=False):
     # Подготовим и загрузим данные по калорийности, код параметра 15
     payload = (start_date, end_date, id_in, FGSZDataDesc.GCV20[Parameter.code])
     headers = ['date', 'GCV']
-    GCV_data = process_json_data(get_FGSZ_data(1, payload).text,
+    gcv_data = process_json_data(get_FGSZ_data(1, payload).text,
                                  headers,
                                  FGSZDataDesc.GCV20[Parameter.name]
                                  ).sort_values('date')
@@ -112,7 +101,7 @@ def get_FGSZ_vr_data(start_date=None, end_date=None, output_xls=False):
     # Подготовим и загрузим данные по Аллокациям, код параметра 24
     payload = (start_date, end_date, id_out, FGSZDataDesc.AllocationKwh[Parameter.code])
     headers = ['date', 'Allocation']
-    Allocation_data = process_json_data(get_FGSZ_data(1, payload).text,
+    allocation_data = process_json_data(get_FGSZ_data(1, payload).text,
                                         headers,
                                         FGSZDataDesc.AllocationKwh[Parameter.name]
                                         ).sort_values('date')
@@ -120,7 +109,7 @@ def get_FGSZ_vr_data(start_date=None, end_date=None, output_xls=False):
     # Подготовим и загрузим данные по Реноминациям, код параметра 22
     payload = (start_date, end_date, id_out, FGSZDataDesc.RenominationKwh[Parameter.code])
     headers = ['date', 'Renomination']
-    Renomination_data = process_json_data(get_FGSZ_data(1, payload).text,
+    renomination_data = process_json_data(get_FGSZ_data(1, payload).text,
                                           headers,
                                           FGSZDataDesc.RenominationKwh[Parameter.name]
                                           ).sort_values('date')
@@ -128,41 +117,41 @@ def get_FGSZ_vr_data(start_date=None, end_date=None, output_xls=False):
         # Подготовим и загрузим данные по физике, код параметра 5
         payload = (start_date, end_date, id_in, FGSZDataDesc.PhysicalFlowKwh[Parameter.code])
         headers = ['periodFrom', 'value']
-        PhysicalFlow_data = process_json_data(get_FGSZ_data(1, payload).text,
-                                              headers,
-                                              FGSZDataDesc.PhysicalFlowKwh[Parameter.name]
-                                              ).sort_values('periodFrom')
-        PhysicalFlow_data['indicator'] = 'Physical Flow'
-        PhysicalFlow_data['directionKey'] = 'entry'
+        physical_flow_data = process_json_data(get_FGSZ_data(1, payload).text,
+                                               headers,
+                                               FGSZDataDesc.PhysicalFlowKwh[Parameter.name]
+                                               ).sort_values('periodFrom')
+        physical_flow_data['indicator'] = 'Physical Flow'
+        physical_flow_data['directionKey'] = 'entry'
 
-
-    #Создадим строковый буфер и запишем в него данные, использованные для расчёта
-    if not(output_xls):
+    # Создадим строковый буфер и запишем в него данные, использованные для расчёта
+    if not output_xls:
         # Если надо выводить на лист, то выгружаем в буфер комментарии и загруженные таблички
         stringio = io.StringIO()
         stringio.write("<p><h2>Данные по калорийности</h2>")
-        stringio.write(GCV_data.to_html(index=False, decimal=','))
+        stringio.write(gcv_data.to_html(index=False, decimal=','))
         stringio.write("<p><h2>Данные по аллокациям</h2>")
-        stringio.write(Allocation_data.to_html(index=False, decimal=','))
+        stringio.write(allocation_data.to_html(index=False, decimal=','))
         stringio.write("<p><h2>Данные по реноминациям</h2>")
-        stringio.write(Renomination_data.to_html(index=False, decimal=','))
-        virtual_reverse = pandas.merge(Renomination_data, GCV_data, left_on=['date'], right_on=['date'], how='outer')
+        stringio.write(renomination_data.to_html(index=False, decimal=','))
+        virtual_reverse = pandas.merge(renomination_data, gcv_data, left_on=['date'], right_on=['date'], how='outer')
         virtual_reverse = virtual_reverse.fillna(method='ffill')
-        virtual_reverse = pandas.merge(virtual_reverse, Allocation_data, left_on=['date'], right_on=['date'], how='outer')
+        virtual_reverse = pandas.merge(virtual_reverse, allocation_data, left_on=['date'], right_on=['date'],
+                                       how='outer')
         virtual_reverse['Allocation_M3'] = virtual_reverse['Allocation'] / virtual_reverse['GCV'] / 10 ** 6 * 1.0738
         virtual_reverse['Renomination_M3'] = virtual_reverse['Renomination'] / virtual_reverse['GCV'] / 10 ** 6 * 1.0738
     else:
-        GCV_data.columns = headers
-        GCV_data['indicator'] = 'GCV'
-        Allocation_data.columns = headers
-        Allocation_data['indicator'] = 'Allocation'
-        Renomination_data.columns = headers
-        Renomination_data['indicator'] = 'Renomination'
-        virtual_reverse = GCV_data
-        virtual_reverse = virtual_reverse.append(Allocation_data)
-        virtual_reverse = virtual_reverse.append(Renomination_data)
+        gcv_data.columns = headers
+        gcv_data['indicator'] = 'GCV'
+        allocation_data.columns = headers
+        allocation_data['indicator'] = 'Allocation'
+        renomination_data.columns = headers
+        renomination_data['indicator'] = 'Renomination'
+        virtual_reverse = gcv_data
+        virtual_reverse = virtual_reverse.append(allocation_data)
+        virtual_reverse = virtual_reverse.append(renomination_data)
         virtual_reverse['directionKey'] = 'exit'
-        virtual_reverse = virtual_reverse.append(PhysicalFlow_data)
+        virtual_reverse = virtual_reverse.append(physical_flow_data)
         virtual_reverse['pointLabel'] = 'VIP Bereg'
         virtual_reverse['periodType'] = 'day'
         virtual_reverse['periodTo'] = virtual_reverse['periodFrom']
@@ -172,32 +161,32 @@ def get_FGSZ_vr_data(start_date=None, end_date=None, output_xls=False):
         virtual_reverse['unit'] = ''
         virtual_reverse['itemRemarks'] = ''
         virtual_reverse['generalRemarks'] = ''
-        headers = ['indicator',	'periodType', 'periodFrom',
+        headers = ['indicator', 'periodType', 'periodFrom',
                    'periodTo', 'tsoEicCode', 'operatorLabel',
                    'pointLabel', 'tsoItemIdentifier', 'directionKey',
                    'unit', 'itemRemarks', 'generalRemarks', 'value']
         virtual_reverse = virtual_reverse[headers]
 
-    if not(output_xls):
+    if not output_xls:
         stringio.write("<p><h2>Таблица с расчётными данными</h2>")
         stringio.write(virtual_reverse.to_html(index=False, decimal=','))
         if show_final_reverse:
-            Al_d_1_eu = filter_df(virtual_reverse, mid_date, 'date')['Allocation_M3'].sum()
-            Al_d_2_eu = filter_df(virtual_reverse, start_date, 'date')['Allocation_M3'].sum()
-            Ren_d_eu = filter_df(virtual_reverse, end_date, 'date')['Renomination_M3'].sum()
-            Al_d_1_ru = Al_d_1_eu / 24 * 21 + Ren_d_eu / 24 * 3
-            Al_d_2_ru = Al_d_2_eu / 24 * 21 + Al_d_1_eu / 24 * 3
+            al_d_1_eu = filter_df(virtual_reverse, mid_date, 'date')['Allocation_M3'].sum()
+            al_d_2_eu = filter_df(virtual_reverse, start_date, 'date')['Allocation_M3'].sum()
+            ren_d_eu = filter_df(virtual_reverse, end_date, 'date')['Renomination_M3'].sum()
+            al_d_1_ru = al_d_1_eu / 24 * 21 + ren_d_eu / 24 * 3
+            al_d_2_ru = al_d_2_eu / 24 * 21 + al_d_1_eu / 24 * 3
 
             in_format = 'В формате '
             stringio.write('<p><h1> Данные по реверсу Берегово: </h1>')
             stringio.write(in_format + '10-10 за {} - {:.3f}<br>'.format(turn_date(mid_date),
-                                                                         round_half_up(Al_d_1_ru, 3)))
+                                                                         round_half_up(al_d_1_ru, 3)))
             stringio.write(in_format + '07-07 за {} - {:.3f}<br>'.format(turn_date(mid_date),
-                                                                         round_half_up(Al_d_1_eu, 3)))
+                                                                         round_half_up(al_d_1_eu, 3)))
             stringio.write(in_format + '10-10 за {} - {:.3f}<br>'.format(turn_date(start_date),
-                                                                         round_half_up(Al_d_2_ru, 3)))
+                                                                         round_half_up(al_d_2_ru, 3)))
             stringio.write(in_format + '07-07 за {} - {:.3f}<br>'.format(turn_date(start_date),
-                                                                         round_half_up(Al_d_2_eu, 3)))
+                                                                         round_half_up(al_d_2_eu, 3)))
 
         return stringio.getvalue()
     else:
@@ -205,6 +194,7 @@ def get_FGSZ_vr_data(start_date=None, end_date=None, output_xls=False):
         virtual_reverse.to_excel(result, index=False)
         result.seek(0)
         return result.getvalue()
+
 
 if __name__ == "__main__":
     get_FGSZ_vr_data()

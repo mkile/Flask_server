@@ -166,9 +166,9 @@ def plot_ENTSOG_map():
     # Create list of interconnection points
     ips_list = pdagr[['name', 'pointTpMapX', 'pointTpMapY', 'pointKey']].drop_duplicates()
     # Get list of UGS
-    UGS_list = ips_list[ips_list['name'].str.contains('UGS')]
+    ugs_list = ips_list[ips_list['name'].str.contains('UGS')]
     # Get list of LNG
-    LNG_list = ips_list[ips_list['pointKey'].str.contains('LNG')]
+    lng_list = ips_list[ips_list['pointKey'].str.contains('LNG')]
     # Remove UGS and LNG from ips_list
     ips_list = ips_list[~ips_list['name'].str.contains('UGS')]
     ips_list = ips_list[~ips_list['pointKey'].str.contains('LNG')]
@@ -177,8 +177,8 @@ def plot_ENTSOG_map():
 
     balance_zones = ColumnDataSource(pdbz)
     ips = ColumnDataSource(ips_list)
-    UGS = ColumnDataSource(UGS_list)
-    LNG = ColumnDataSource(LNG_list)
+    ugs = ColumnDataSource(ugs_list)
+    lng = ColumnDataSource(lng_list)
 
     p = figure(output_backend="webgl")
     p.sizing_mode = 'scale_width'
@@ -187,7 +187,7 @@ def plot_ENTSOG_map():
     template = """if (cb_obj.active.includes({num})){{{obj}.visible = true}}
                     else {{{obj}.visible = false}}
                     """
-    l = []
+    lines = []
     args = {}
     code = ''
     num = 0
@@ -196,9 +196,9 @@ def plot_ENTSOG_map():
     for bz_outline_x, bz_outline_y, bz in outlines:
         bz_name = 'bz' + str(num)
         bz_list.append(pdbz.loc[pdbz['bzKey'] == bz, 'name'].to_string(index=False))  # bz
-        l.append(p.patch(bz_outline_x, bz_outline_y, alpha=0.5, fill_color='#%02X%02X%02X' % (r(), r(), r())))
+        lines.append(p.patch(bz_outline_x, bz_outline_y, alpha=0.5, fill_color='#%02X%02X%02X' % (r(), r(), r())))
         code += template.format(num=num, obj=bz_name)
-        args[bz_name] = l[-1]
+        args[bz_name] = lines[-1]
         num += 1
 
     # Create title for checkboxes
@@ -257,14 +257,14 @@ def plot_ENTSOG_map():
     # Plot UGS
     ugs_points = p.square(x='pointTpMapX',
                           y='pointTpMapY',
-                          source=UGS,
+                          source=ugs,
                           size=8,
                           fill_color='#a240a2',
                           legend_label='ПХГ')
     # Plot LNG
     lng_points = p.diamond(x='pointTpMapX',
                            y='pointTpMapY',
-                           source=LNG,
+                           source=lng,
                            size=12,
                            fill_color='#2DDBE7',
                            legend_label='Терминалы СПГ')
@@ -335,6 +335,7 @@ def load_points_names():
         ips = json.loads(ips.text)
         ips = pandas.DataFrame(ips['Interconnections'])
     except Exception as E:
+        print(E)
         return 'Error loading points names', E
     return ips[['pointLabel', 'pointKey']].drop_duplicates()
 
@@ -346,6 +347,7 @@ def load_operators_names():
         operators = json.loads(operators.text)
         operators = pandas.DataFrame(operators['operators'])
     except Exception as E:
+        print(E)
         return 'Error loading operator names', E
     return operators[['operatorLabel', 'operatorKey']].drop_duplicates()
 
@@ -356,9 +358,11 @@ def create_data_table(pandas_table):
     cols = cols[-1:] + cols[0:-1]
     pandas_table = pandas_table[cols]
     points = load_points_names()
+    loaded_points_names = False
     if not isinstance(points, tuple):
         pandas_table = pandas.merge(pandas_table, points, on=['pointKey', 'pointKey'])
         pandas_table = pandas_table.drop(columns=['pointKey'])
+        loaded_points_names = True
     operators = load_operators_names()
     if not isinstance(operators, tuple):
         pandas_table = pandas.merge(pandas_table, operators, on=['operatorKey', 'operatorKey'])
@@ -393,15 +397,23 @@ def create_data_table(pandas_table):
     target_obj.change.emit();
     """
 
-    # define the filter widgets, without callbacks for now
-    date_list = ['Все'] + pandas_table['periodFrom'].drop_duplicates().sort_values().tolist()
+    # prepare some data for histogram
+    plot_data = pandas_table.groupby(['periodFrom', 'indicator']).size().reset_index(name='Counts')
+    dates = plot_data['periodFrom'].drop_duplicates().sort_values()
+    indicators = plot_data['indicator'].drop_duplicates().sort_values().tolist()
+
+    # define filter widgets, without callbacks for now
+    date_list = ['Все'] + dates.tolist()
     date_select = Select(title="Дата:", value=date_list[0], options=date_list)
-    indicator_list = ['Все'] + pandas_table['indicator'].drop_duplicates().tolist()
+    indicator_list = ['Все'] + indicators
     indicator_select = Select(title="Индикатор:", value=indicator_list[0], options=indicator_list)
-    point_list = ['Все'] + pandas_table['pointLabel'].drop_duplicates().sort_values().tolist()
+    if loaded_points_names:
+        point_list = ['Все'] + pandas_table['pointLabel'].drop_duplicates().sort_values().tolist()
+    else:
+        point_list = ['Все'] + pandas_table['pointKey'].drop_duplicates().sort_values().tolist()
     point_select = Select(title="Пункт:", value=point_list[0], options=point_list)
 
-    # now define the callback objects now that the filter widgets exist
+    # now define callback objects now that the filter widgets exist
     generic_callback = CustomJS(
         args=dict(source=source_table,
                   original_source=original_source_table,
@@ -417,10 +429,7 @@ def create_data_table(pandas_table):
     indicator_select.js_on_change('value', generic_callback)
     point_select.js_on_change('value', generic_callback)
 
-    # add graph to visualise changed amounts by date and indicator
-    plot_data = pandas_table.groupby(['periodFrom', 'indicator']).size().reset_index(name='Counts')
-    dates = plot_data['periodFrom'].drop_duplicates().sort_values()
-    indicators = plot_data['indicator'].drop_duplicates().sort_values().tolist()
+    # add histogram to visualise changed amounts by date and indicator
     plot_data = {x: plot_data.loc[plot_data.indicator == x][['periodFrom', 'Counts']]
                  for x in indicators}
     plot_data = {y: pandas.merge(dates, plot_data[y], on=['periodFrom', 'periodFrom'],

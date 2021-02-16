@@ -64,7 +64,7 @@ def executeRequest(link):
         print('Error getting data from server ', e)
         result = list()
         result.append('no data')
-        result.append('Error getting data from server', e)
+        result.append('Error getting data from server' + str(e))
         return error_msg
 
 
@@ -84,9 +84,9 @@ def getJSONdataENTSOG(response):
             if indicator == '':
                 indicator = js['indicator']
             result.append(line)
-        Field = Fields.copy()
-        Field.append(indicator)
-        return pandas.DataFrame(result, columns=Field)
+        field = Fields.copy()
+        field.append(indicator)
+        return pandas.DataFrame(result, columns=field)
     except Exception as e:
         print("Error getting data from json ", e)
         print(jsondata)
