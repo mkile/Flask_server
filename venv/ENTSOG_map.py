@@ -96,6 +96,9 @@ def plot_dataframe_coords(coords, name):
 
 
 def plot_ENTSOG_map():
+    def r():
+        return random.randint(0, 255)
+
     # Построить карту ENTSOG
     bz = requests.get(bz_link)
     agr_ic = requests.get(points_link)
@@ -191,7 +194,6 @@ def plot_ENTSOG_map():
     args = {}
     code = ''
     num = 0
-    r = lambda: random.randint(0, 255)
     bz_list = []
     for bz_outline_x, bz_outline_y, bz in outlines:
         bz_name = 'bz' + str(num)
@@ -377,6 +379,7 @@ def create_data_table(pandas_table):
     var data = source.data;
     var original_data = original_source.data;
     var date = date_select_obj.value;
+    var save_date = save_date_select_obj.value;
     console.log("Date: " + date);
     var indicator = indicator_select_obj.value;
     console.log("Indicator: " + indicator);
@@ -385,8 +388,9 @@ def create_data_table(pandas_table):
     for (var key in original_data) {
         data[key] = [];
         for (var i = 0; i < original_data['periodFrom'].length; ++i) {
-            if ((date === "Все" || original_data['periodFrom'][i] === date) &&
+            if ((date === "Все" || original_data['periodFrom'][i].match(date)) &&
                 (indicator === "Все" || original_data['indicator'][i] === indicator) &&
+                (save_date === "Все" || original_data['savedate'][i] === save_date) &&
                 (point === "Все" || original_data['pointLabel'][i] === point)) {
                 data[key].push(original_data[key][i]);
             }
@@ -398,12 +402,15 @@ def create_data_table(pandas_table):
     """
 
     # prepare some data for histogram
-    plot_data = pandas_table.groupby(['periodFrom', 'indicator']).size().reset_index(name='Counts')
-    dates = plot_data['periodFrom'].drop_duplicates().sort_values()
-    indicators = plot_data['indicator'].drop_duplicates().sort_values().tolist()
+    table_data = pandas_table[['savedate', 'periodFrom', 'indicator']].drop_duplicates()
+    save_dates = table_data['savedate'].drop_duplicates().sort_values()
+    dates = table_data['periodFrom'].drop_duplicates().sort_values()
+    indicators = table_data['indicator'].drop_duplicates().sort_values().tolist()
 
     # define filter widgets, without callbacks for now
-    date_list = ['Все'] + dates.tolist()
+    save_date_list = ['Все'] + save_dates.tolist()
+    save_date_select = Select(title="Дата обновления:", value=save_date_list[0], options=save_date_list)
+    date_list = ['Все'] + dates.apply(lambda x: x[:10]).drop_duplicates().tolist()
     date_select = Select(title="Дата:", value=date_list[0], options=date_list)
     indicator_list = ['Все'] + indicators
     indicator_select = Select(title="Индикатор:", value=indicator_list[0], options=indicator_list)
@@ -418,6 +425,7 @@ def create_data_table(pandas_table):
         args=dict(source=source_table,
                   original_source=original_source_table,
                   date_select_obj=date_select,
+                  save_date_select_obj=save_date_select,
                   indicator_select_obj=indicator_select,
                   point_select_obj=point_select,
                   target_obj=agrtable),
@@ -425,11 +433,13 @@ def create_data_table(pandas_table):
     )
 
     # finally, connect the callbacks to the filter widgets
+    save_date_select.js_on_change('value', generic_callback)
     date_select.js_on_change('value', generic_callback)
     indicator_select.js_on_change('value', generic_callback)
     point_select.js_on_change('value', generic_callback)
 
     # add histogram to visualise changed amounts by date and indicator
+    plot_data = pandas_table.groupby(['periodFrom', 'indicator']).size().reset_index(name='Counts')
     plot_data = {x: plot_data.loc[plot_data.indicator == x][['periodFrom', 'Counts']]
                  for x in indicators}
     plot_data = {y: pandas.merge(dates, plot_data[y], on=['periodFrom', 'periodFrom'],
@@ -452,7 +462,7 @@ def create_data_table(pandas_table):
     plot.legend.location = "top_left"
     plot.legend.orientation = "horizontal"
 
-    layout = column(row(date_select, point_select, indicator_select),
+    layout = column(row(save_date_select, date_select, point_select, indicator_select),
                     agrtable, plot, sizing_mode='stretch_width')
     return json.dumps(json_item(layout, "mytable"))
 
