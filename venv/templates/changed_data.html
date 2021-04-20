@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <title>Перечень данных обновленных ENTSOG</title>
+  {{ resources|safe }}
+  <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='css/main.css') }}">
+</head>
+<body>
+  <h1> Перечень данных обновленных ENTSOG </h1>
+  <div class="linear-activity" style="display:block;">
+    <div class="indeterminate"></div>
+  </div>
+  <div id="mytable"></div>
+  <script>
+  fetch('/updated_data')
+    .then(function(response) {
+      document.getElementsByClassName('linear-activity')[0].style.display = 'none';
+      return response.json()
+      })
+    .then(function(item) { return Bokeh.embed.embed_item(item) })
+  </script>
+  <br>
+  <p><a href="/" class="button two">Вернуться на главную страницу</a></p>
+  <i>Данные обновлены: <b>{{last_updated}}</b>></i> <br>
+</body>

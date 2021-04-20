@@ -1,5 +1,4 @@
-from distutils.command.check import check
-
+import random
 import requests
 import pandas
 import json
@@ -9,8 +8,7 @@ from bokeh.layouts import column, row
 from bokeh.models.tools import HoverTool
 from bokeh.embed import json_item
 from scipy.spatial import ConvexHull
-from bokeh.palettes import Spectral3
-import random
+
 
 bz_link = 'https://transparency.entsog.eu/api/v1/balancingzones?limit=-1'
 points_link = 'https://transparency.entsog.eu/api/v1/Interconnections?limit=-1'
@@ -18,7 +16,7 @@ operators_link = 'https://transparency.entsog.eu/api/v1/operators'
 
 
 def prepare_BZ_outlines(full_points_list):
-    # Нарисовать контуры вокруг всех точек БЗ
+    # Нарисовать контуры описывающие все точки входящие в БЗ
     bz_list = full_points_list['toBzKey']
     bz_list.append(full_points_list['fromBzKey'].rename('toBzKey'))
     bz_list = bz_list.drop_duplicates().dropna().to_list()
@@ -100,9 +98,9 @@ def plot_ENTSOG_map():
         return random.randint(0, 255)
 
     # Построить карту ENTSOG
-    bz = requests.get(bz_link)
+    bal_zone_data = requests.get(bz_link)
     agr_ic = requests.get(points_link)
-    jsbz = json.loads(bz.text)
+    jsbz = json.loads(bal_zone_data.text)
     jsbz = jsbz['balancingzones']
     pdbz = pandas.DataFrame(jsbz)
     pdbz = pdbz[['tpMapX', 'tpMapY', 'bzKey', 'bzLabelLong', 'bzTooltip', ]]
@@ -168,11 +166,11 @@ def plot_ENTSOG_map():
 
     # Create list of interconnection points
     ips_list = pdagr[['name', 'pointTpMapX', 'pointTpMapY', 'pointKey']].drop_duplicates()
-    # Get list of UGS
+    # Get list of UGSs
     ugs_list = ips_list[ips_list['name'].str.contains('UGS')]
-    # Get list of LNG
+    # Get list of LNGs
     lng_list = ips_list[ips_list['pointKey'].str.contains('LNG')]
-    # Remove UGS and LNG from ips_list
+    # Remove UGSs and LNGs from ips_list
     ips_list = ips_list[~ips_list['name'].str.contains('UGS')]
     ips_list = ips_list[~ips_list['pointKey'].str.contains('LNG')]
 
@@ -195,9 +193,9 @@ def plot_ENTSOG_map():
     code = ''
     num = 0
     bz_list = []
-    for bz_outline_x, bz_outline_y, bz in outlines:
+    for bz_outline_x, bz_outline_y, bal_zone_data in outlines:
         bz_name = 'bz' + str(num)
-        bz_list.append(pdbz.loc[pdbz['bzKey'] == bz, 'name'].to_string(index=False))  # bz
+        bz_list.append(pdbz.loc[pdbz['bzKey'] == bal_zone_data, 'name'].to_string(index=False))  # bz
         lines.append(p.patch(bz_outline_x, bz_outline_y, alpha=0.5, fill_color='#%02X%02X%02X' % (r(), r(), r())))
         code += template.format(num=num, obj=bz_name)
         args[bz_name] = lines[-1]
@@ -300,8 +298,8 @@ def plot_ENTSOG_table():
     balance_zones = ColumnDataSource(pdbz)
     points = ColumnDataSource(pdagr)
 
-    p = figure()
-    p.sizing_mode = 'scale_width'
+    # output_figure = figure()
+    # output_figure.sizing_mode = 'scale_width'
 
     bzcolumns = [
         TableColumn(field='bzKey', title='Ключ балансовой зоны'),
@@ -336,9 +334,9 @@ def load_points_names():
         ips = requests.get(points_link)
         ips = json.loads(ips.text)
         ips = pandas.DataFrame(ips['Interconnections'])
-    except Exception as E:
-        print(E)
-        return 'Error loading points names', E
+    except Exception as error:
+        print(error)
+        return 'Error loading points names', error
     return ips[['pointLabel', 'pointKey']].drop_duplicates()
 
 
@@ -348,13 +346,15 @@ def load_operators_names():
         operators = requests.get(operators_link)
         operators = json.loads(operators.text)
         operators = pandas.DataFrame(operators['operators'])
-    except Exception as E:
-        print(E)
-        return 'Error loading operator names', E
+    except Exception as error:
+        print(error)
+        return 'Error loading operator names', error
     return operators[['operatorLabel', 'operatorKey']].drop_duplicates()
 
 
 def create_data_table(pandas_table):
+    # Цвета для столбиков
+    colors = ["#6c8c30", "#306c8c", "#736648", "#e79e3d"]
     # Подготовим табличку, заменим коды объёктов на их имена
     cols = list(pandas_table.columns)
     cols = cols[-1:] + cols[0:-1]
@@ -445,8 +445,6 @@ def create_data_table(pandas_table):
     plot_data = {y: pandas.merge(dates, plot_data[y], on=['periodFrom', 'periodFrom'],
                                  how='outer')['Counts'].fillna(0).astype('int32').tolist() for y in indicators}
     plot_data['x'] = dates
-
-    colors = ["#6c8c30", "#306c8c", "#736648", "#e79e3d"]
 
     plot = figure(x_range=dates, plot_height=400, plot_width=800,
                   title="Количество изменений по суткам",

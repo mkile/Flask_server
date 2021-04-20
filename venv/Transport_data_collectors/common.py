@@ -8,13 +8,13 @@ import json
 import io
 
 # Константы
-error_msg = '#error#'
+ERROR_MSG = '#error#'
 Fields = ['date', 'point']
 
 
-def filter_df(data, filter, field):
+def filter_df(data, filter_value, field):
     # Filter data by filter and return needed field
-    result = data.loc[data[field] == filter]
+    result = data.loc[data[field] == filter_value]
     return result
 
 
@@ -38,17 +38,17 @@ def turn_date(date):
     return date[8:] + '.' + date[5:7] + '.' + date[:4]
 
 
-def round_half_up(n, decimals=0):
+def round_half_up(number, decimals=0):
     multiplier = 10 ** decimals
-    return math.floor(n * multiplier + 0.5) / multiplier
+    return math.floor(number * multiplier + 0.5) / multiplier
 
 
 def getandprocessJSONdataENTSOG(link):
     # get data from internet and process json with it
     response = executeRequest(link)
-    if response != error_msg:
+    if response != ERROR_MSG:
         return getJSONdataENTSOG(response)
-    return
+    return None
 
 
 def executeRequest(link):
@@ -57,38 +57,39 @@ def executeRequest(link):
         print('Getting data from link: ', link)
         response = requests.get(link)
         if response.status_code != 200:
-            return error_msg
+            return ERROR_MSG
         print('Data recieved.')
         return response
-    except Exception as e:
-        print('Error getting data from server ', e)
+    except Exception as error:
+        print('Error getting data from server ', error)
         result = list()
         result.append('no data')
-        result.append('Error getting data from server' + str(e))
-        return error_msg
+        result.append('Error getting data from server' + str(error))
+        return ERROR_MSG
 
 
 def getJSONdataENTSOG(response):
     # load entsog data and return pandas dataframe
     indicator = ''
+    jsondata = ''
     try:
         jsondata = json.loads(response.text)
-        if jsondata == error_msg:
+        if jsondata == ERROR_MSG:
             return ''
         result = list()
-        for js in jsondata['operationalData']:
+        for js_element in jsondata['operationalData']:
             line = list()
-            line.append(js['periodFrom'])
-            line.append(js['pointLabel'])
-            line.append(js['value'])
+            line.append(js_element['periodFrom'])
+            line.append(js_element['pointLabel'])
+            line.append(js_element['value'])
             if indicator == '':
-                indicator = js['indicator']
+                indicator = js_element['indicator']
             result.append(line)
         field = Fields.copy()
         field.append(indicator)
         return pandas.DataFrame(result, columns=field)
-    except Exception as e:
-        print("Error getting data from json ", e)
+    except Exception as error:
+        print("Error getting data from json ", error)
         print(jsondata)
         return ''
 
@@ -97,8 +98,8 @@ def get_excel_data(link):
     try:
         with io.BytesIO(executeRequest(link).content) as csvfile:
             return pandas.read_csv(csvfile)
-    except Exception as E:
-        print('Got error during processing link data ({}), error {}'.format(link, E))
+    except Exception as error:
+        print('Got error during processing link data ({}), error {}'.format(link, error))
         return pandas.DataFrame()
 
 
