@@ -6,9 +6,10 @@ import io
 from datetime import timedelta, datetime
 
 import pandas
-from Transport_data_collectors.common import filter_df, add_html_line, turn_date, round_half_up, \
-    add_table_row, getandprocessJSONdataENTSOG, error_msg
 from dateutil.parser import parse
+
+from source.Transport_data_collectors.common import filter_df, add_html_line, turn_date, round_half_up, \
+    add_table_row, getandprocessJSONdataENTSOG, ERROR_MSG
 
 # Данные
 Suffixes = ['V', 'G']
@@ -117,11 +118,11 @@ def get_ENTSOG_vr_data(settings, email=False):
                                                'date'), point, 'point')['Renomination_M3'].sum()
             if al_d_1_value == 0:
                 comment += add_table_row('Реноминация за Д-1 отсутствует или равна 0.')
-                comment += add_table_row(error_msg)
+                comment += add_table_row(ERROR_MSG)
         if ren_d_value == 0:
             comment += add_table_row('Реноминация для Д отсутствует или равна 0.')
-            comment += add_table_row(error_msg)
-        if error_msg in comment:
+            comment += add_table_row(ERROR_MSG)
+        if ERROR_MSG in comment:
             comment += add_table_row('Часть данных равна 0, возможен некорректный результат')
         al_d_1.append(al_d_1_value)
         al_d_2.append(al_d_2_value)
@@ -168,7 +169,7 @@ def get_ENTSOG_vr_data(settings, email=False):
     if len(comment) > 0 and not email:
         stringio.write('<br><h3>Ошибки загрузки данных.</h3>')
         stringio.write('<table class="errortable"> <tbody>')
-        stringio.write(comment.replace(error_msg, 'Внимание !'))
+        stringio.write(comment.replace(ERROR_MSG, 'Внимание !'))
         stringio.write('</tbody></table>')
     return stringio.getvalue()
 
@@ -176,8 +177,8 @@ def get_ENTSOG_vr_data(settings, email=False):
 # This one is obsolete
 def get_and_send_GCV_data():
     # Если время отправки калорийности наступило
-    date1 = (datetime(now.year, now.month, now.day) - timedelta(days=2)).strftime('%Y-%m-%d')
-    date2 = (datetime(now.year, now.month, now.day)).strftime('%Y-%m-%d')
+    date1 = (datetime(datetime.now.year, datetime.now.month, datetime.now.day) - timedelta(days=2)).strftime('%Y-%m-%d')
+    date2 = (datetime(datetime.now.year, datetime.now.month, datetime.now.day)).strftime('%Y-%m-%d')
     print("Getting data for ", str(date1))
     link1 = 'https://transparency.entsog.eu/api/v1/operationalData?forceDownload=' \
             'true&pointDirection=pl-tso-0001itp-00104entry&from=' + date1 + '&to=' \
@@ -185,8 +186,8 @@ def get_and_send_GCV_data():
     link2 = 'https://transparency.entsog.eu/api/v1/operationalData?forceDownload=' \
             'true&pointDirection=sk-tso-0001itp-00117entry&from=' + date1 + '&to=' \
             + date2 + '&indicator=GCV&periodType=day&timezone=CET&limit=10&dataset=1'
-    res1 = getJSONdata(link1)
-    res2 = getJSONdata(link2)
+    res1 = getandprocessJSONdataENTSOG(link1)
+    res2 = getandprocessJSONdataENTSOG(link2)
     try:
         if len(res1) > 0:
             message = 'Kondratki: ' + str(res1[1]) + ' :' + str(res1[0])

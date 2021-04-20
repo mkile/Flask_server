@@ -4,8 +4,9 @@ Functions for checking, updating and storing data update information
 import sqlite3
 from datetime import datetime, timedelta
 
-import Transport_data_collectors.common as tpc
 import pandas
+
+import source.Transport_data_collectors.common as tpc
 
 default_link = 'https://transparency.entsog.eu/api/v1/operationalData.csv?forceDownload=true&' \
                'delimiter=comma&from={}&to={}&indicator=' \

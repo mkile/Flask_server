@@ -14,15 +14,15 @@ from flask import redirect, request, session, make_response
 from waitress import serve
 from werkzeug.exceptions import HTTPException
 
-from ENTSOG_map import plot_ENTSOG_map, plot_ENTSOG_table, create_data_table
-from Email_sender import process_message
-from Transport_data_collectors.ENTSOG import get_ENTSOG_vr_data
-from Transport_data_collectors.FGSZ import get_FGSZ_vr_data
-from Transport_data_collectors.Update_checker import collect_and_compare_data, get_updated_data
+from source.ENTSOG_map import plot_ENTSOG_map, plot_ENTSOG_table, create_data_table
+from source.Email_sender import process_message
+from source.Transport_data_collectors.ENTSOG import get_ENTSOG_vr_data
+from source.Transport_data_collectors.FGSZ import get_FGSZ_vr_data
+from source.Transport_data_collectors.Update_checker import collect_and_compare_data, get_updated_data
 
 app = Flask(__name__)
-path_to_aux_db = '../venv/data.db'
-path_to_settings_db = '../venv/data.db'
+path_to_aux_db = '../data/data.db'
+path_to_settings_db = '../data/data.db'
 
 
 def get_updated():
@@ -217,7 +217,7 @@ def save_settings(name, value):
     c.execute("delete from data where parameter='{}'".format(name))
     conn.commit()
     if isinstance(value, list):
-        for val_element in list_value:
+        for val_element in value:
             c.execute("insert into data (parameter, value) values ('{}', '{}')".format(name, val_element))
     else:
         c.execute("insert into data (parameter, value) values ('{}', '{}')".format(name, value))

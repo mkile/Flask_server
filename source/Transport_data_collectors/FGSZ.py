@@ -4,7 +4,8 @@ import json
 
 import pandas
 import requests
-from Transport_data_collectors.common import filter_df, turn_date, round_half_up
+
+from source.Transport_data_collectors.common import filter_df, turn_date, round_half_up
 
 
 class Parameter:
@@ -28,10 +29,10 @@ def get_FGSZ_data(request_type, data=()):
     # Первый параметр тип запроса,
     # второй - параметры заменяемые в строке запроса, для получения нужной ссылки
     header = {'Content-Type': 'application/json',
-              'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' \
+              'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
                             '(KHTML, like Gecko) Chrome/81.0.4044.129 Safari/537.36 OPR/68.0.3618.63'}
-    payload = ['{"start":0,"limit":25,"isCombo":true,"fields":null,"sort":' \
-               '[{"property":"name","direction":"ASC","isGrouper":false}],"filter":' \
+    payload = ['{"start":0,"limit":25,"isCombo":true,"fields":null,"sort":'
+               '[{"property":"name","direction":"ASC","isGrouper":false}],"filter":'
                '[{"property":"name","comparison":"sw","value":"vip"}]}',
                '{"start":0,"limit":2000,"fields":null,"sort":'
                '[{"property":"gasDay","direction":"DESC","isGrouper":false}],'
@@ -61,7 +62,7 @@ def process_json_data(json_text, headers, indicator):
                 new_line.append(line['gasPeriod'])
                 new_line.append(line['value'])
                 result.append(new_line)
-        except:
+        except Exception as Err:
             print('В строке за %s нет значения' % line['gasPeriod'])
     return pandas.DataFrame(result, columns=headers)
 
@@ -82,8 +83,8 @@ def get_FGSZ_vr_data(start_date=None, end_date=None, output_xls=False):
     # выберем их ID для направлений OUT и IN
     try:
         points_json = json.loads(get_FGSZ_data(0).text)['data']
-    except:
-        return start_date, end_date, '#error#', 'Ошибка загрузки данных с сайта FGSZ'
+    except Exception as Err:
+        return start_date, end_date, '#error#', 'Ошибка загрузки данных с сайта FGSZ {}'.format(str(Err))
     for point in points_json:
         if point['direction'] == 'OUT' and 'Bereg' in point['name']:
             id_out = str(point['id'])
