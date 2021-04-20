@@ -1,10 +1,10 @@
-import requests
-import json
 import datetime
-import pandas
-from tabulate import tabulate
-from Transport_data_collectors.common import filter_df, turn_date, round_half_up
 import io
+import json
+
+import pandas
+import requests
+from Transport_data_collectors.common import filter_df, turn_date, round_half_up
 
 
 class Parameter:

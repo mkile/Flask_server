@@ -2,13 +2,13 @@
 Functions for collecting necessary data from ENTSOG and prearing it for showing or sending
 """
 
-from datetime import timedelta, datetime
-import pandas
-import tabulate
-from Transport_data_collectors.common import filter_df, add_html_line, add_html_link, turn_date, round_half_up, \
-    add_table_row, getandprocessJSONdataENTSOG, executeRequest, getJSONdataENTSOG, error_msg
-from dateutil.parser import parse
 import io
+from datetime import timedelta, datetime
+
+import pandas
+from Transport_data_collectors.common import filter_df, add_html_line, turn_date, round_half_up, \
+    add_table_row, getandprocessJSONdataENTSOG, error_msg
+from dateutil.parser import parse
 
 # Данные
 Suffixes = ['V', 'G']

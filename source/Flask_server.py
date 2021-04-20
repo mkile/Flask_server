@@ -1,29 +1,28 @@
 """
 Central module initiating Flask server and updating necessary data, when needed.
 """
-from flask import Flask, render_template, url_for, copy_current_request_context, send_from_directory
+import atexit
+import os
+import sqlite3
+from datetime import datetime
+from time import sleep
+
+from apscheduler.schedulers.background import BackgroundScheduler
+from bokeh.resources import CDN
+from flask import Flask, render_template, url_for, send_from_directory
 from flask import redirect, request, session, make_response
-from Transport_data_collectors.FGSZ import get_FGSZ_vr_data
-from Transport_data_collectors.ENTSOG import get_ENTSOG_vr_data
-from Transport_data_collectors.Update_checker import collect_and_compare_data, get_updated_data
+from waitress import serve
+from werkzeug.exceptions import HTTPException
+
 from ENTSOG_map import plot_ENTSOG_map, plot_ENTSOG_table, create_data_table
 from Email_sender import process_message
-import os
-from time import sleep
-import sqlite3
-
-import atexit
-from apscheduler.schedulers.background import BackgroundScheduler
-
-from werkzeug.exceptions import HTTPException
-from bokeh.resources import CDN
-
-from datetime import datetime
-from waitress import serve
+from Transport_data_collectors.ENTSOG import get_ENTSOG_vr_data
+from Transport_data_collectors.FGSZ import get_FGSZ_vr_data
+from Transport_data_collectors.Update_checker import collect_and_compare_data, get_updated_data
 
 app = Flask(__name__)
-path_to_aux_db = 'data.db'
-path_to_settings_db = 'settings.db'
+path_to_aux_db = '../venv/data.db'
+path_to_settings_db = '../venv/data.db'
 
 
 def get_updated():
@@ -32,7 +31,7 @@ def get_updated():
 
 @app.route('/favicon.ico')
 def favicon():
-    return send_from_directory(os.path.join(app.root_path, 'static'),
+    return send_from_directory(os.path.join(app.root_path, '../venv/static'),
                                'favicon.ico', mimetype='image/vnd.microsoft.icon')
 
 
@@ -194,16 +193,16 @@ def check_time_and_send_email():
 
 
 def load_settings(value):
-    # Procedure for loading settings from database
-    # DB contains table settings with two text fields: parameter and value
+    # Procedure for loading data from database
+    # DB contains table data with two text fields: parameter and value
     try:
         conn = sqlite3.connect(path_to_settings_db)
         c = conn.cursor()
-        c.execute("select value from settings where parameter='{}'".format(value))
+        c.execute("select value from data where parameter='{}'".format(value))
         result = c.fetchall()
         conn.close()
     except Exception as E:
-        return 'Error loading settings', E
+        return 'Error loading data', E
     if len(result) == 1:
         return result[0][0]
     else:
@@ -215,13 +214,13 @@ def save_settings(name, value):
     # Procedure for saving setting to database
     conn = sqlite3.connect(path_to_settings_db)
     c = conn.cursor()
-    c.execute("delete from settings where parameter='{}'".format(name))
+    c.execute("delete from data where parameter='{}'".format(name))
     conn.commit()
     if isinstance(value, list):
         for val_element in list_value:
-            c.execute("insert into settings (parameter, value) values ('{}', '{}')".format(name, val_element))
+            c.execute("insert into data (parameter, value) values ('{}', '{}')".format(name, val_element))
     else:
-        c.execute("insert into settings (parameter, value) values ('{}', '{}')".format(name, value))
+        c.execute("insert into data (parameter, value) values ('{}', '{}')".format(name, value))
     conn.commit()
     conn.close()
 

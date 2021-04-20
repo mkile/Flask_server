@@ -1,14 +1,14 @@
-import random
-import requests
-import pandas
 import json
-from bokeh.plotting import figure
-from bokeh.models import ColumnDataSource, DataTable, CustomJS, CheckboxGroup, TableColumn, Div, Select
-from bokeh.layouts import column, row
-from bokeh.models.tools import HoverTool
-from bokeh.embed import json_item
-from scipy.spatial import ConvexHull
+import random
 
+import pandas
+import requests
+from bokeh.embed import json_item
+from bokeh.layouts import column, row
+from bokeh.models import ColumnDataSource, DataTable, CustomJS, CheckboxGroup, TableColumn, Div, Select
+from bokeh.models.tools import HoverTool
+from bokeh.plotting import figure
+from scipy.spatial import ConvexHull
 
 bz_link = 'https://transparency.entsog.eu/api/v1/balancingzones?limit=-1'
 points_link = 'https://transparency.entsog.eu/api/v1/Interconnections?limit=-1'

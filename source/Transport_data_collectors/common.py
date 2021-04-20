@@ -1,11 +1,12 @@
 """
 Basic procedures used in multiple places
 """
-import pandas
-import math
-import requests
-import json
 import io
+import json
+import math
+
+import pandas
+import requests
 
 # Константы
 ERROR_MSG = '#error#'

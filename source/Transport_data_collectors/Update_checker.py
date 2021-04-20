@@ -1,10 +1,11 @@
 """
 Functions for checking, updating and storing data update information
 """
-import Transport_data_collectors.common as tpc
 import sqlite3
-import pandas
 from datetime import datetime, timedelta
+
+import Transport_data_collectors.common as tpc
+import pandas
 
 default_link = 'https://transparency.entsog.eu/api/v1/operationalData.csv?forceDownload=true&' \
                'delimiter=comma&from={}&to={}&indicator=' \
@@ -26,8 +27,8 @@ def disconnect_from_db(connection):
 
 
 def load_data(connection, date, table='saveddata'):
-    # Procedure for loading settings
-    # DB contains table settings with two text fields: parameter and value
+    # Procedure for loading data
+    # DB contains table data with two text fields: parameter and value
     if table == 'newdata':
         saveddata = ',savedate'
     else:
