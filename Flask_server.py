@@ -2,9 +2,9 @@
 Central module initiating Flask server and updating necessary data, when needed.
 """
 import atexit
-import os
-import sqlite3
 from datetime import datetime
+from os import path, urandom
+from sqlite3 import connect
 from time import sleep
 
 from apscheduler.schedulers.background import BackgroundScheduler
@@ -31,7 +31,7 @@ def get_updated():
 
 @app.route('/favicon.ico')
 def favicon():
-    return send_from_directory(os.path.join(app.root_path, '../venv/static'),
+    return send_from_directory(path.join(app.root_path, '../venv/static'),
                                'favicon.ico', mimetype='image/vnd.microsoft.icon')
 
 
@@ -196,7 +196,7 @@ def load_settings(value):
     # Procedure for loading data from database
     # DB contains table data with two text fields: parameter and value
     try:
-        conn = sqlite3.connect(path_to_settings_db)
+        conn = connect(path_to_settings_db)
         c = conn.cursor()
         c.execute("select value from data where parameter='{}'".format(value))
         result = c.fetchall()
@@ -212,7 +212,7 @@ def load_settings(value):
 
 def save_settings(name, value):
     # Procedure for saving setting to database
-    conn = sqlite3.connect(path_to_settings_db)
+    conn = connect(path_to_settings_db)
     c = conn.cursor()
     c.execute("delete from data where parameter='{}'".format(name))
     conn.commit()
@@ -241,7 +241,7 @@ def run_update_checker():
             save_settings('last_check_date', now_str)
 
 
-app.config['SECRET_KEY'] = os.urandom(16)
+app.config['SECRET_KEY'] = urandom(16)
 app.config['DEBUG'] = True
 
 if __name__ == '__main__':

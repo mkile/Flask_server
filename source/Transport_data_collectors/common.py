@@ -1,12 +1,12 @@
 """
 Basic procedures used in multiple places
 """
-import io
 import json
-import math
+from io import BytesIO
+from math import floor
 
-import pandas
-import requests
+from pandas import read_csv, DataFrame
+from requests import get
 
 # Константы
 ERROR_MSG = '#error#'
@@ -41,7 +41,7 @@ def turn_date(date):
 
 def round_half_up(number, decimals=0):
     multiplier = 10 ** decimals
-    return math.floor(number * multiplier + 0.5) / multiplier
+    return floor(number * multiplier + 0.5) / multiplier
 
 
 def getandprocessJSONdataENTSOG(link):
@@ -56,7 +56,7 @@ def executeRequest(link):
     # get data with request
     try:
         print('Getting data from link: ', link)
-        response = requests.get(link)
+        response = get(link)
         if response.status_code != 200:
             return ERROR_MSG
         print('Data recieved.')
@@ -88,7 +88,7 @@ def getJSONdataENTSOG(response):
             result.append(line)
         field = Fields.copy()
         field.append(indicator)
-        return pandas.DataFrame(result, columns=field)
+        return DataFrame(result, columns=field)
     except Exception as error:
         print("Error getting data from json ", error)
         print(jsondata)
@@ -97,11 +97,11 @@ def getJSONdataENTSOG(response):
 
 def get_excel_data(link):
     try:
-        with io.BytesIO(executeRequest(link).content) as csvfile:
-            return pandas.read_csv(csvfile)
+        with BytesIO(executeRequest(link).content) as csvfile:
+            return read_csv(csvfile)
     except Exception as error:
         print('Got error during processing link data ({}), error {}'.format(link, error))
-        return pandas.DataFrame()
+        return DataFrame()
 
 
 if __name__ == "__main__":

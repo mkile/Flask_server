@@ -1,10 +1,10 @@
 """
 Functions for checking, updating and storing data update information
 """
-import sqlite3
 from datetime import datetime, timedelta
+from sqlite3 import connect
 
-import pandas
+from pandas import DataFrame
 
 import source.Transport_data_collectors.common as tpc
 
@@ -17,7 +17,7 @@ data_depth = 30
 
 def connect_to_db(connection_path):
     try:
-        connection = sqlite3.connect(connection_path)
+        connection = connect(connection_path)
         return connection
     except Exception as E:
         return 'Error opening connection to DB', E
@@ -59,7 +59,7 @@ def save_all_data(data, connection, type_, today):
 
 
 def collect_new_ENTSOG_data(columns):
-    datatable = pandas.DataFrame()
+    datatable = DataFrame()
     # Сместим текущую дату от текущей на 1 день, так как сравниваем с загруженными вчера данными
     today = datetime.now() - timedelta(days=1)
     for currDay in range(0, data_depth):
@@ -83,10 +83,10 @@ def collect_and_compare_data(path_to_db, today):
     # Check if connection was successfully established
     if isinstance(connection, tuple):
         return connection
-    updated_data = pandas.DataFrame(columns=columns)
+    updated_data = DataFrame(columns=columns)
     # new_data.to_csv('xls/new_data_all.csv')
     for date in dates:
-        old_data = pandas.DataFrame(load_data(connection, date), columns=columns)
+        old_data = DataFrame(load_data(connection, date), columns=columns)
         # old_data.to_excel('xls/old_data {}.xls'.format(date.replace(':', '')))
         test_data = new_data[new_data[columns[0]].str.contains(date)]
         changed_data = test_data.append(old_data).drop_duplicates(keep=False)
@@ -105,7 +105,7 @@ def get_updated_data(path_to_db):
     if isinstance(connection, tuple):
         return connection
     columns = ['periodFrom', 'indicator', 'pointKey', 'operatorKey', 'directionKey', 'lastUpdateDateTime', 'savedate']
-    updated_data = pandas.DataFrame(load_data(connection, '%', 'newdata'), columns=columns)
+    updated_data = DataFrame(load_data(connection, '%', 'newdata'), columns=columns)
     # return updated_data.to_html(index=False, decimal=',')
     return updated_data
 

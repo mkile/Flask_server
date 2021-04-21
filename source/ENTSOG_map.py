@@ -1,13 +1,13 @@
-import json
 import random
+from json import loads, dumps
 
-import pandas
-import requests
 from bokeh.embed import json_item
 from bokeh.layouts import column, row
 from bokeh.models import ColumnDataSource, DataTable, CustomJS, CheckboxGroup, TableColumn, Div, Select
 from bokeh.models.tools import HoverTool
 from bokeh.plotting import figure
+from pandas import DataFrame, merge
+from requests import get
 from scipy.spatial import ConvexHull
 
 bz_link = 'https://transparency.entsog.eu/api/v1/balancingzones?limit=-1'
@@ -98,17 +98,17 @@ def plot_ENTSOG_map():
         return random.randint(0, 255)
 
     # Построить карту ENTSOG
-    bal_zone_data = requests.get(bz_link)
-    agr_ic = requests.get(points_link)
-    jsbz = json.loads(bal_zone_data.text)
+    bal_zone_data = get(bz_link)
+    agr_ic = get(points_link)
+    jsbz = loads(bal_zone_data.text)
     jsbz = jsbz['balancingzones']
-    pdbz = pandas.DataFrame(jsbz)
+    pdbz = DataFrame(jsbz)
     pdbz = pdbz[['tpMapX', 'tpMapY', 'bzKey', 'bzLabelLong', 'bzTooltip', ]]
     pdbz = pdbz.rename(columns={'bzLabelLong': 'name'})
 
-    jsagr_ic = json.loads(agr_ic.text)
+    jsagr_ic = loads(agr_ic.text)
     jsagr_ic = jsagr_ic['Interconnections']
-    pdagr = pandas.DataFrame(jsagr_ic)
+    pdagr = DataFrame(jsagr_ic)
     pdagr = pdagr.rename(columns={'pointLabel': 'name'})
     pdagr = pdagr[
         ['pointKey',
@@ -281,17 +281,17 @@ def plot_ENTSOG_map():
         sizing_mode='scale_height')
 
     # return json
-    return json.dumps(json_item(layout, "myplot"))
+    return dumps(json_item(layout, "myplot"))
 
 
 def plot_ENTSOG_table():
     # Создание таблиц БЗ и пунктов Bokeh
-    bz = requests.get(bz_link)
-    agr_ic = requests.get(points_link)
-    pdbz = pandas.DataFrame(json.loads(bz.text)['balancingzones'])
+    bz = get(bz_link)
+    agr_ic = get(points_link)
+    pdbz = DataFrame(loads(bz.text)['balancingzones'])
     pdbz = pdbz.drop_duplicates().fillna('-')
 
-    pdagr = pandas.DataFrame(json.loads(agr_ic.text)['Interconnections'])
+    pdagr = DataFrame(loads(agr_ic.text)['Interconnections'])
     pdagr = pdagr.drop_duplicates().fillna('-')
     # Work with bokeh
 
@@ -325,15 +325,15 @@ def plot_ENTSOG_table():
                  sizing_mode='scale_both')
 
     # return json
-    return json.dumps(json_item(layout, "mytable"))
+    return dumps(json_item(layout, "mytable"))
 
 
 def load_points_names():
     # Загрузка списков сопоставления пунктов
     try:
-        ips = requests.get(points_link)
-        ips = json.loads(ips.text)
-        ips = pandas.DataFrame(ips['Interconnections'])
+        ips = get(points_link)
+        ips = loads(ips.text)
+        ips = DataFrame(ips['Interconnections'])
     except Exception as error:
         print(error)
         return 'Error loading points names', error
@@ -343,9 +343,9 @@ def load_points_names():
 def load_operators_names():
     # Загрузка списков сопоставления операторов
     try:
-        operators = requests.get(operators_link)
-        operators = json.loads(operators.text)
-        operators = pandas.DataFrame(operators['operators'])
+        operators = get(operators_link)
+        operators = loads(operators.text)
+        operators = DataFrame(operators['operators'])
     except Exception as error:
         print(error)
         return 'Error loading operator names', error
@@ -362,12 +362,12 @@ def create_data_table(pandas_table):
     points = load_points_names()
     loaded_points_names = False
     if not isinstance(points, tuple):
-        pandas_table = pandas.merge(pandas_table, points, on=['pointKey', 'pointKey'])
+        pandas_table = merge(pandas_table, points, on=['pointKey', 'pointKey'])
         pandas_table = pandas_table.drop(columns=['pointKey'])
         loaded_points_names = True
     operators = load_operators_names()
     if not isinstance(operators, tuple):
-        pandas_table = pandas.merge(pandas_table, operators, on=['operatorKey', 'operatorKey'])
+        pandas_table = merge(pandas_table, operators, on=['operatorKey', 'operatorKey'])
         pandas_table = pandas_table.drop(columns=['operatorKey'])
     # Создание таблицы Bokeh из таблицы Pandas
     source_table = ColumnDataSource(pandas_table)
@@ -442,8 +442,8 @@ def create_data_table(pandas_table):
     plot_data = pandas_table.groupby(['periodFrom', 'indicator']).size().reset_index(name='Counts')
     plot_data = {x: plot_data.loc[plot_data.indicator == x][['periodFrom', 'Counts']]
                  for x in indicators}
-    plot_data = {y: pandas.merge(dates, plot_data[y], on=['periodFrom', 'periodFrom'],
-                                 how='outer')['Counts'].fillna(0).astype('int32').tolist() for y in indicators}
+    plot_data = {y: merge(dates, plot_data[y], on=['periodFrom', 'periodFrom'],
+                          how='outer')['Counts'].fillna(0).astype('int32').tolist() for y in indicators}
     plot_data['x'] = dates
 
     plot = figure(x_range=dates, plot_height=400, plot_width=800,
@@ -462,7 +462,7 @@ def create_data_table(pandas_table):
 
     layout = column(row(save_date_select, date_select, point_select, indicator_select),
                     agrtable, plot, sizing_mode='stretch_width')
-    return json.dumps(json_item(layout, "mytable"))
+    return dumps(json_item(layout, "mytable"))
 
 
 if __name__ == "__main__":

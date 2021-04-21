@@ -2,11 +2,11 @@
 Functions for collecting necessary data from ENTSOG and prearing it for showing or sending
 """
 
-import io
 from datetime import timedelta, datetime
+from io import StringIO
 
-import pandas
 from dateutil.parser import parse
+from pandas import DataFrame, merge
 
 from source.Transport_data_collectors.common import filter_df, add_html_line, turn_date, round_half_up, \
     add_table_row, getandprocessJSONdataENTSOG, ERROR_MSG
@@ -28,7 +28,7 @@ def get_ENTSOG_vr_data(settings, email=False):
     # Variable for comments
     comment = ''
     # Variable for resulting data
-    stringio = io.StringIO()
+    stringio = StringIO()
 
     now = datetime.now()
     date_from = (datetime(now.year, now.month, now.day) - timedelta(days=delta)).strftime('%Y-%m-%d')
@@ -38,7 +38,7 @@ def get_ENTSOG_vr_data(settings, email=False):
     stringio.write('<h3>Протокол обновления данных</h3>')
     stringio.write('<textarea rows="10" cols="100">')
     stringio.write(f"Getting {indicator_list[0]} data for {str(date_from)} " + br)
-    aldata = pandas.DataFrame()
+    aldata = DataFrame()
     for point in points_list:
         link = link_template.format(point, date_from, date_to, indicator_list[0])
         stringio.write(link + br)
@@ -46,7 +46,7 @@ def get_ENTSOG_vr_data(settings, email=False):
     aldata = aldata.sort_values('date')
     # GCV Data Recieve
     stringio.write(br + f"Getting {indicator_list[1]} data for {str(date_from)} " + br)
-    gcv_data = pandas.DataFrame()
+    gcv_data = DataFrame()
     for point in points_list:
         link = link_template.format(point, date_from, date_to, indicator_list[1])
         stringio.write(link + br)
@@ -54,7 +54,7 @@ def get_ENTSOG_vr_data(settings, email=False):
     gcv_data = gcv_data.sort_values('date')
     # Renomination Data Recieve
     stringio.write(br + f"Getting {indicator_list[2]} data for {str(date_from)}" + br)
-    ren_data = pandas.DataFrame()
+    ren_data = DataFrame()
     for point in points_list:
         link = link_template.format(point, date_from, date_to, indicator_list[2])
         stringio.write(link + br)
@@ -69,11 +69,11 @@ def get_ENTSOG_vr_data(settings, email=False):
     stringio.write("<p><h2>Данные по реноминациям</h2>")
     stringio.write(ren_data.to_html(index=False, decimal=','))
     # join tables
-    vdata = pandas.merge(ren_data, gcv_data, left_on=['date', 'point'], right_on=['date', 'point'], how='outer')
+    vdata = merge(ren_data, gcv_data, left_on=['date', 'point'], right_on=['date', 'point'], how='outer')
     vdata = vdata.sort_values(['point', 'date'], ascending=True)
     vdata = vdata.fillna(method='ffill')
     vdata = vdata.sort_values(['date', 'point'], ascending=True)
-    vdata = pandas.merge(vdata, aldata, left_on=['date', 'point'], right_on=['date', 'point'], how='outer')
+    vdata = merge(vdata, aldata, left_on=['date', 'point'], right_on=['date', 'point'], how='outer')
     # calculate m3
     vdata['Allocation_M3'] = vdata['Allocation'] / vdata['GCV'] / 10 ** 6 * 1.0738
     vdata['Renomination_M3'] = vdata['Renomination'] / vdata['GCV'] / 10 ** 6 * 1.0738
@@ -153,7 +153,7 @@ def get_ENTSOG_vr_data(settings, email=False):
                                                                             round_half_up(al_d_2_10, 3))))
     # Если отправляем сообщение, то оставляем только итог
     if email:
-        stringio = io.StringIO()
+        stringio = StringIO()
 
     # Запишем суммарные данные по всем ГИС
     stringio.write(add_html_line('<br><p><h1>Суммарные данные по виртуальному реверсу:</h1>'))
