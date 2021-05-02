@@ -22,7 +22,7 @@ from source.Transport_data_collectors.Update_checker import collect_and_compare_
 
 app = Flask(__name__)
 path_to_aux_db = '../data/data.db'
-path_to_settings_db = '../data/data.db'
+path_to_settings_db = '../data/settings.db'
 
 
 def get_updated():
@@ -198,7 +198,7 @@ def load_settings(value):
     try:
         conn = connect(path_to_settings_db)
         c = conn.cursor()
-        c.execute("select value from data where parameter='{}'".format(value))
+        c.execute("select value from settings where parameter='{}'".format(value))
         result = c.fetchall()
         conn.close()
     except Exception as E:
@@ -214,13 +214,13 @@ def save_settings(name, value):
     # Procedure for saving setting to database
     conn = connect(path_to_settings_db)
     c = conn.cursor()
-    c.execute("delete from data where parameter='{}'".format(name))
+    c.execute("delete from settings where parameter='{}'".format(name))
     conn.commit()
     if isinstance(value, list):
         for val_element in value:
-            c.execute("insert into data (parameter, value) values ('{}', '{}')".format(name, val_element))
+            c.execute("insert into settings (parameter, value) values ('{}', '{}')".format(name, val_element))
     else:
-        c.execute("insert into data (parameter, value) values ('{}', '{}')".format(name, value))
+        c.execute("insert into settings (parameter, value) values ('{}', '{}')".format(name, value))
     conn.commit()
     conn.close()
 

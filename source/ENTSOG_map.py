@@ -363,7 +363,11 @@ def create_data_table(pandas_table):
     loaded_points_names = False
     if not isinstance(points, tuple):
         pandas_table = merge(pandas_table, points, on=['pointKey', 'pointKey'])
+        ##
+        pandas_table.to_csv('pandas_table_merged.csv')
+        ##
         pandas_table = pandas_table.drop(columns=['pointKey'])
+
         loaded_points_names = True
     operators = load_operators_names()
     if not isinstance(operators, tuple):

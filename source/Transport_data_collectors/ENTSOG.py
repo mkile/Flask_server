@@ -20,7 +20,7 @@ indicator_list = ['Allocation', 'GCV', 'Renomination']
 
 def get_ENTSOG_vr_data(settings, email=False):
     # Timedelta for dates
-    delta = 2
+    delta = 4
     # List of points for reverse calculation
     points_list = settings
     # Line break
@@ -34,7 +34,7 @@ def get_ENTSOG_vr_data(settings, email=False):
     date_from = (datetime(now.year, now.month, now.day) - timedelta(days=delta)).strftime('%Y-%m-%d')
     # date_mid = (datetime(now.year, now.month, now.day) - timedelta(days=1)).strftime('%Y-%m-%d')
     date_to = (datetime(now.year, now.month, now.day)).strftime('%Y-%m-%d')
-    # Allocation Data Recieve
+    # Allocation Data Receive
     stringio.write('<h3>Протокол обновления данных</h3>')
     stringio.write('<textarea rows="10" cols="100">')
     stringio.write(f"Getting {indicator_list[0]} data for {str(date_from)} " + br)
@@ -43,8 +43,11 @@ def get_ENTSOG_vr_data(settings, email=False):
         link = link_template.format(point, date_from, date_to, indicator_list[0])
         stringio.write(link + br)
         aldata = aldata.append(getandprocessJSONdataENTSOG(link))
-    aldata = aldata.sort_values('date')
-    # GCV Data Recieve
+    if len(aldata) == 0:
+        stringio.write('Данных по аллокациям в ENTSOG нет.')
+    else:
+        aldata = aldata.sort_values('date')
+    # GCV Data Receive
     stringio.write(br + f"Getting {indicator_list[1]} data for {str(date_from)} " + br)
     gcv_data = DataFrame()
     for point in points_list:
@@ -52,7 +55,7 @@ def get_ENTSOG_vr_data(settings, email=False):
         stringio.write(link + br)
         gcv_data = gcv_data.append(getandprocessJSONdataENTSOG(link))
     gcv_data = gcv_data.sort_values('date')
-    # Renomination Data Recieve
+    # Renomination Data Receive
     stringio.write(br + f"Getting {indicator_list[2]} data for {str(date_from)}" + br)
     ren_data = DataFrame()
     for point in points_list:
