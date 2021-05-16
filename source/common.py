@@ -1,7 +1,6 @@
 """
 Basic procedures used in multiple places
 """
-import json
 from io import BytesIO
 from math import floor
 
@@ -10,7 +9,8 @@ from requests import get
 
 # Константы
 ERROR_MSG = '#error#'
-Fields = ['date', 'point']
+FIELDS = ['date', 'point']
+DATA_DEPTH = 30
 
 
 def filter_df(data, filter_value, field):
@@ -60,25 +60,18 @@ def executeRequest(link):
         if response.status_code != 200:
             return ERROR_MSG
         print('Data recieved.')
-        return response
+        return response.json()
     except Exception as error:
         print('Error getting data from server ', error)
-        result = list()
-        result.append('no data')
-        result.append('Error getting data from server' + str(error))
         return ERROR_MSG
 
 
 def getJSONdataENTSOG(response):
     # load entsog data and return pandas dataframe
     indicator = ''
-    jsondata = ''
     try:
-        jsondata = json.loads(response.text)
-        if jsondata == ERROR_MSG:
-            return ''
         result = list()
-        for js_element in jsondata['operationalData']:
+        for js_element in response['operationalData']:
             line = list()
             line.append(js_element['periodFrom'])
             line.append(js_element['pointLabel'])
@@ -86,12 +79,12 @@ def getJSONdataENTSOG(response):
             if indicator == '':
                 indicator = js_element['indicator']
             result.append(line)
-        field = Fields.copy()
+        field = FIELDS.copy()
         field.append(indicator)
         return DataFrame(result, columns=field)
     except Exception as error:
         print("Error getting data from json ", error)
-        print(jsondata)
+        print(response)
         return ''
 
 

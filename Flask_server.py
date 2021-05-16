@@ -14,15 +14,17 @@ from flask import redirect, request, session, make_response
 from waitress import serve
 from werkzeug.exceptions import HTTPException
 
-from source.ENTSOG_map import plot_ENTSOG_map, plot_ENTSOG_table, create_data_table
-from source.Email_sender import process_message
-from source.Transport_data_collectors.ENTSOG import get_ENTSOG_vr_data
-from source.Transport_data_collectors.FGSZ import get_FGSZ_vr_data
-from source.Transport_data_collectors.Update_checker import collect_and_compare_data, get_updated_data
+from source.db_works import check_n_create_data_tables
+from source.email_sender import process_message
+from source.entsog import get_ENTSOG_vr_data
+from source.entsog_map import plot_ENTSOG_map, plot_ENTSOG_table, create_data_table
+from source.fgsz import get_FGSZ_vr_data
+from source.update_checker import collect_and_compare_data, get_updated_data
 
 app = Flask(__name__)
-path_to_aux_db = '../data/data.db'
-path_to_settings_db = '../data/settings.db'
+path_to_data = '../data/'
+data_db_name = 'data.db'
+settings_db_name = 'settings.db'
 
 
 def get_updated():
@@ -158,7 +160,7 @@ def fgsz_page():
 def entsog_show_updated_data():
     if not session.get('logged_in'):
         return render_template('login.html')
-    updated_data = get_updated_data(path_to_aux_db)
+    updated_data = get_updated_data(path_to_data + data_db_name)
     if isinstance(updated_data, tuple):
         return '<br> Ошибка: ' + updated_data[0] + '<br>' + updated_data[1]
     else:
@@ -196,7 +198,7 @@ def load_settings(value):
     # Procedure for loading data from database
     # DB contains table data with two text fields: parameter and value
     try:
-        conn = connect(path_to_settings_db)
+        conn = connect(path_to_data + settings_db_name)
         c = conn.cursor()
         c.execute("select value from settings where parameter='{}'".format(value))
         result = c.fetchall()
@@ -212,7 +214,7 @@ def load_settings(value):
 
 def save_settings(name, value):
     # Procedure for saving setting to database
-    conn = connect(path_to_settings_db)
+    conn = connect(path_to_data + settings_db_name)
     c = conn.cursor()
     c.execute("delete from settings where parameter='{}'".format(name))
     conn.commit()
@@ -234,7 +236,7 @@ def run_update_checker():
         print(last_check_date)
         return
     if last_check_date != now_str and now.hour < 11:
-        result = collect_and_compare_data(path_to_aux_db, now)
+        result = collect_and_compare_data(path_to_data + data_db_name, now)
         if isinstance(result, tuple):
             print(result)
         else:
@@ -245,14 +247,18 @@ app.config['SECRET_KEY'] = urandom(16)
 app.config['DEBUG'] = True
 
 if __name__ == '__main__':
-    # collect_and_compare_data(path_to_aux_db, datetime.now())
-    # run_update_checker()
-    # app.run(host='0.0.0.0', threaded=True)
-    # Background process for sending email at designated time
-    scheduler = BackgroundScheduler()
-    # scheduler.add_job(func=check_time_and_send_email, trigger='interval', minutes=5)
-    scheduler.add_job(func=run_update_checker, trigger='interval', hours=1)
-    scheduler.start()
-    # serve app
-    serve(app, host='0.0.0.0', port=5000)
-    atexit.register(lambda: scheduler.shutdown())
+    db_check = check_n_create_data_tables(path_to_data, data_db_name)
+    if db_check is None:
+        # collect_and_compare_data(path_to_aux_db, datetime.now())
+        # run_update_checker()
+        # app.run(host='0.0.0.0', threaded=True)
+        # Background process for sending email at designated time
+        scheduler = BackgroundScheduler()
+        # scheduler.add_job(func=check_time_and_send_email, trigger='interval', minutes=5)
+        scheduler.add_job(func=run_update_checker, trigger='interval', hours=1)
+        scheduler.start()
+        # serve app
+        serve(app, host='0.0.0.0', port=5000)
+        atexit.register(lambda: scheduler.shutdown())
+    else:
+        print(db_check)

@@ -1,5 +1,5 @@
 import random
-from json import loads, dumps
+from json import dumps
 
 from bokeh.embed import json_item
 from bokeh.layouts import column, row
@@ -98,15 +98,13 @@ def plot_ENTSOG_map():
         return random.randint(0, 255)
 
     # Построить карту ENTSOG
-    bal_zone_data = get(bz_link)
-    agr_ic = get(points_link)
-    jsbz = loads(bal_zone_data.text)
+    jsbz = get(bz_link).json()
     jsbz = jsbz['balancingzones']
     pdbz = DataFrame(jsbz)
     pdbz = pdbz[['tpMapX', 'tpMapY', 'bzKey', 'bzLabelLong', 'bzTooltip', ]]
     pdbz = pdbz.rename(columns={'bzLabelLong': 'name'})
 
-    jsagr_ic = loads(agr_ic.text)
+    jsagr_ic = get(points_link).json()
     jsagr_ic = jsagr_ic['Interconnections']
     pdagr = DataFrame(jsagr_ic)
     pdagr = pdagr.rename(columns={'pointLabel': 'name'})
@@ -286,12 +284,10 @@ def plot_ENTSOG_map():
 
 def plot_ENTSOG_table():
     # Создание таблиц БЗ и пунктов Bokeh
-    bz = get(bz_link)
-    agr_ic = get(points_link)
-    pdbz = DataFrame(loads(bz.text)['balancingzones'])
+    pdbz = DataFrame(get(bz_link).json()['balancingzones'])
     pdbz = pdbz.drop_duplicates().fillna('-')
 
-    pdagr = DataFrame(loads(agr_ic.text)['Interconnections'])
+    pdagr = DataFrame(get(points_link).json()['Interconnections'])
     pdagr = pdagr.drop_duplicates().fillna('-')
     # Work with bokeh
 
@@ -331,8 +327,7 @@ def plot_ENTSOG_table():
 def load_points_names():
     # Загрузка списков сопоставления пунктов
     try:
-        ips = get(points_link)
-        ips = loads(ips.text)
+        ips = get(points_link).json()
         ips = DataFrame(ips['Interconnections'])
     except Exception as error:
         print(error)
@@ -343,8 +338,7 @@ def load_points_names():
 def load_operators_names():
     # Загрузка списков сопоставления операторов
     try:
-        operators = get(operators_link)
-        operators = loads(operators.text)
+        operators = get(operators_link).json()
         operators = DataFrame(operators['operators'])
     except Exception as error:
         print(error)

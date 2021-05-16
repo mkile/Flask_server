@@ -5,7 +5,7 @@ import json
 import pandas
 import requests
 
-from source.Transport_data_collectors.common import filter_df, turn_date, round_half_up
+from source.common import filter_df, turn_date, round_half_up
 
 
 class Parameter:
@@ -53,7 +53,7 @@ def get_FGSZ_data(request_type, data=()):
 
 def process_json_data(json_text, headers, indicator):
     # Процедура обработки загруженных данных
-    data = json.loads(json_text)['data']
+    data = json_text['data']
     result = []
     for line in data:
         new_line = []
@@ -85,6 +85,8 @@ def get_FGSZ_vr_data(start_date=None, end_date=None, output_xls=False):
         points_json = json.loads(get_FGSZ_data(0).text)['data']
     except Exception as Err:
         return start_date, end_date, '#error#', 'Ошибка загрузки данных с сайта FGSZ {}'.format(str(Err))
+    id_in = ''
+    id_out = ''
     for point in points_json:
         if point['direction'] == 'OUT' and 'Bereg' in point['name']:
             id_out = str(point['id'])
@@ -94,7 +96,7 @@ def get_FGSZ_vr_data(start_date=None, end_date=None, output_xls=False):
     # Подготовим и загрузим данные по калорийности, код параметра 15
     payload = (start_date, end_date, id_in, FGSZDataDesc.GCV20[Parameter.code])
     headers = ['date', 'GCV']
-    gcv_data = process_json_data(get_FGSZ_data(1, payload).text,
+    gcv_data = process_json_data(get_FGSZ_data(1, payload).json,
                                  headers,
                                  FGSZDataDesc.GCV20[Parameter.name]
                                  ).sort_values('date')
@@ -102,7 +104,7 @@ def get_FGSZ_vr_data(start_date=None, end_date=None, output_xls=False):
     # Подготовим и загрузим данные по Аллокациям, код параметра 24
     payload = (start_date, end_date, id_out, FGSZDataDesc.AllocationKwh[Parameter.code])
     headers = ['date', 'Allocation']
-    allocation_data = process_json_data(get_FGSZ_data(1, payload).text,
+    allocation_data = process_json_data(get_FGSZ_data(1, payload).json,
                                         headers,
                                         FGSZDataDesc.AllocationKwh[Parameter.name]
                                         ).sort_values('date')
@@ -110,7 +112,7 @@ def get_FGSZ_vr_data(start_date=None, end_date=None, output_xls=False):
     # Подготовим и загрузим данные по Реноминациям, код параметра 22
     payload = (start_date, end_date, id_out, FGSZDataDesc.RenominationKwh[Parameter.code])
     headers = ['date', 'Renomination']
-    renomination_data = process_json_data(get_FGSZ_data(1, payload).text,
+    renomination_data = process_json_data(get_FGSZ_data(1, payload).json,
                                           headers,
                                           FGSZDataDesc.RenominationKwh[Parameter.name]
                                           ).sort_values('date')
@@ -118,7 +120,7 @@ def get_FGSZ_vr_data(start_date=None, end_date=None, output_xls=False):
         # Подготовим и загрузим данные по физике, код параметра 5
         payload = (start_date, end_date, id_in, FGSZDataDesc.PhysicalFlowKwh[Parameter.code])
         headers = ['periodFrom', 'value']
-        physical_flow_data = process_json_data(get_FGSZ_data(1, payload).text,
+        physical_flow_data = process_json_data(get_FGSZ_data(1, payload).json,
                                                headers,
                                                FGSZDataDesc.PhysicalFlowKwh[Parameter.name]
                                                ).sort_values('periodFrom')

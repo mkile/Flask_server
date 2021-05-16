@@ -2,70 +2,27 @@
 Functions for checking, updating and storing data update information
 """
 from datetime import datetime, timedelta
-from sqlite3 import connect
 
 from pandas import DataFrame
 
-import source.Transport_data_collectors.common as tpc
+import source.common as tpc
+from source.common import DATA_DEPTH
+from source.db_works import connect_to_db, disconnect_from_db, load_data, save_all_data
 
-default_link = 'https://transparency.entsog.eu/api/v1/operationalData.csv?forceDownload=true&' \
+DEFAULT_LINK = 'https://transparency.entsog.eu/api/v1/operationalData.csv?forceDownload=true&' \
                'delimiter=comma&from={}&to={}&indicator=' \
                'Renomination,Allocation,Physical%20Flow,GCV&periodType=day&' \
                'timezone=CET&periodize=0&limit=-1&isTransportData=true&dataset=1'
-data_depth = 30
-
-
-def connect_to_db(connection_path):
-    try:
-        connection = connect(connection_path)
-        return connection
-    except Exception as E:
-        return 'Error opening connection to DB', E
-
-
-def disconnect_from_db(connection):
-    connection.close()
-
-
-def load_data(connection, date, table='saveddata'):
-    # Procedure for loading data
-    # DB contains table data with two text fields: parameter and value
-    if table == 'newdata':
-        saveddata = ',savedate'
-    else:
-        saveddata = ''
-    request = "select periodfrom,indicator,pointkey,operatorkey,directionkey," \
-              "lastUpdateDateTime {} from {} where periodfrom like '%{}%'".format(saveddata, table, date)
-    result = connection.execute(request).fetchall()
-    return result
-
-
-def save_all_data(data, connection, type_, today):
-    # Допишем новые данные
-    if type_ == 'saveddata':
-        data = [tuple(x) for x in data.values]
-        # Удалим старые данные
-        connection.execute("delete from saveddata")
-        connection.executemany("insert into saveddata values (?, ?, ?, ?, ?, ?)", data)
-    else:
-        data['savedate'] = str(today.strftime('%d.%m.%Y'))
-        data = [tuple(x) for x in data.values]
-        # Удалим старые данные
-        request = "delete from newdata where savedate='{}'"\
-            .format(str((today - timedelta(days=data_depth)).strftime('%d.%m.%Y')))
-        connection.execute(request)
-        connection.executemany("insert into newdata values (?, ?, ?, ?, ?, ?, ?)", data)
-    connection.commit()
 
 
 def collect_new_ENTSOG_data(columns):
     datatable = DataFrame()
     # Сместим текущую дату от текущей на 1 день, так как сравниваем с загруженными вчера данными
     today = datetime.now() - timedelta(days=1)
-    for currDay in range(0, data_depth):
+    for currDay in range(0, DATA_DEPTH):
         start_date = (today - timedelta(days=currDay + 1)).strftime('%Y-%m-%d')
         end_date = (today - timedelta(days=currDay)).strftime('%Y-%m-%d')
-        link = default_link.format(start_date, end_date)
+        link = DEFAULT_LINK.format(start_date, end_date)
         datatable = datatable.append(tpc.get_excel_data(link)[columns])
     print('All data collected.')
     return datatable
@@ -106,6 +63,10 @@ def get_updated_data(path_to_db):
         return connection
     columns = ['periodFrom', 'indicator', 'pointKey', 'operatorKey', 'directionKey', 'lastUpdateDateTime', 'savedate']
     updated_data = DataFrame(load_data(connection, '%', 'newdata'), columns=columns)
+    groupcolumns = [x for x in columns if x != 'lastUpdateDateTime']
+    indexes = updated_data.groupby(groupcolumns)['lastUpdateDateTime'].transform(max) == \
+              updated_data['lastUpdateDateTime']
+    updated_data = updated_data[indexes]
     # return updated_data.to_html(index=False, decimal=',')
     return updated_data
 

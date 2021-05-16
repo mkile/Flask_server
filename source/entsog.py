@@ -8,14 +8,14 @@ from io import StringIO
 from dateutil.parser import parse
 from pandas import DataFrame, merge
 
-from source.Transport_data_collectors.common import filter_df, add_html_line, turn_date, round_half_up, \
+from source.common import filter_df, add_html_line, turn_date, round_half_up, \
     add_table_row, getandprocessJSONdataENTSOG, ERROR_MSG
 
 # Данные
-Suffixes = ['V', 'G']
-link_template = 'https://transparency.entsog.eu/api/v1/operationalData?periodType=day&pointDirection=' \
+SUFFIXES = ['V', 'G']
+LINK_TEMPLATE = 'https://transparency.entsog.eu/api/v1/operationalData?periodType=day&pointDirection=' \
                 '{}&from={}&to={}&indicator={}&timezone=CET&periodize=0&sort=PeriodFrom&limit=-1'
-indicator_list = ['Allocation', 'GCV', 'Renomination']
+INDICATOR_LIST = ['Allocation', 'GCV', 'Renomination']
 
 
 def get_ENTSOG_vr_data(settings, email=False):
@@ -37,10 +37,10 @@ def get_ENTSOG_vr_data(settings, email=False):
     # Allocation Data Receive
     stringio.write('<h3>Протокол обновления данных</h3>')
     stringio.write('<textarea rows="10" cols="100">')
-    stringio.write(f"Getting {indicator_list[0]} data for {str(date_from)} " + br)
+    stringio.write(f"Getting {INDICATOR_LIST[0]} data for {str(date_from)} " + br)
     aldata = DataFrame()
     for point in points_list:
-        link = link_template.format(point, date_from, date_to, indicator_list[0])
+        link = LINK_TEMPLATE.format(point, date_from, date_to, INDICATOR_LIST[0])
         stringio.write(link + br)
         aldata = aldata.append(getandprocessJSONdataENTSOG(link))
     if len(aldata) == 0:
@@ -48,18 +48,18 @@ def get_ENTSOG_vr_data(settings, email=False):
     else:
         aldata = aldata.sort_values('date')
     # GCV Data Receive
-    stringio.write(br + f"Getting {indicator_list[1]} data for {str(date_from)} " + br)
+    stringio.write(br + f"Getting {INDICATOR_LIST[1]} data for {str(date_from)} " + br)
     gcv_data = DataFrame()
     for point in points_list:
-        link = link_template.format(point, date_from, date_to, indicator_list[1])
+        link = LINK_TEMPLATE.format(point, date_from, date_to, INDICATOR_LIST[1])
         stringio.write(link + br)
         gcv_data = gcv_data.append(getandprocessJSONdataENTSOG(link))
     gcv_data = gcv_data.sort_values('date')
     # Renomination Data Receive
-    stringio.write(br + f"Getting {indicator_list[2]} data for {str(date_from)}" + br)
+    stringio.write(br + f"Getting {INDICATOR_LIST[2]} data for {str(date_from)}" + br)
     ren_data = DataFrame()
     for point in points_list:
-        link = link_template.format(point, date_from, date_to, indicator_list[2])
+        link = LINK_TEMPLATE.format(point, date_from, date_to, INDICATOR_LIST[2])
         stringio.write(link + br)
         ren_data = ren_data.append(getandprocessJSONdataENTSOG(link))
     ren_data = ren_data.sort_values('date')

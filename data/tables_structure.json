@@ -1,0 +1,27 @@
+{
+  "newdata": {
+    "periodfrom": "INTEGER NOT NULL",
+    "indicator": "TEXT NOT NULL",
+    "pointkey": "TEXT NOT NULL",
+    "operatorkey": "TEXT NOT NULL",
+    "directionkey": "TEXT NOT NULL",
+    "lastUpdateDateTime": "INTEGER NOT NULL",
+    "saveDate": "TEXT"
+  },
+  "saveddata": {
+    "periodfrom": "NUMERIC NOT NULL",
+    "indicator": "TEXT NOT NULL",
+    "pointkey": "TEXT NOT NULL",
+    "operatorkey": "TEXT NOT NULL",
+    "directionkey": "TEXT NOT NULL",
+    "lastUpdateDateTime": "NUMERIC NOT NULL"
+  },
+  "points": {
+    "pointkey": "TEXT NOT NULL UNIQUE",
+    "pointlabel": "TEXT NOT NULL UNIQUE"
+},
+  "operators": {
+    "operatorkey": "TEXT NOT NULL UNIQUE",
+    "operatorlabel": "TEXT NOT NULL UNIQUE"
+}
+}
