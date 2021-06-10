@@ -2,7 +2,7 @@ from datetime import timedelta
 from json import loads
 from sqlite3 import connect
 
-from common import DATA_DEPTH
+from dataprocessing.common import DATA_DEPTH
 
 
 def connect_to_db(connection_path):

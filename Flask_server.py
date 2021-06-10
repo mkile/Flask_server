@@ -14,15 +14,15 @@ from flask import redirect, request, session, make_response
 from waitress import serve
 from werkzeug.exceptions import HTTPException
 
-from source.db_works import check_n_create_data_tables
-from source.email_sender import process_message
-from source.entsog import get_ENTSOG_vr_data
-from source.entsog_map import plot_ENTSOG_map, plot_ENTSOG_table, create_data_table
-from source.fgsz import get_FGSZ_vr_data
-from source.update_checker import collect_and_compare_data, get_updated_data
+from dataprocessing.db_works import check_n_create_data_tables
+from dataprocessing.email_sender import process_message
+from dataprocessing.entsog import get_ENTSOG_vr_data
+from dataprocessing.entsog_map import plot_ENTSOG_map, plot_ENTSOG_table, create_data_table
+from dataprocessing.fgsz import get_FGSZ_vr_data
+from dataprocessing.update_checker import collect_and_compare_data, get_updated_data
 
 app = Flask(__name__)
-path_to_data = '../data/'
+path_to_data = './data/'
 data_db_name = 'data.db'
 settings_db_name = 'settings.db'
 

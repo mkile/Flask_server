@@ -374,7 +374,7 @@ def create_data_table(pandas_table):
     source_columns = [TableColumn(field=cname, title=cname) for cname in column_names]
     agrtable = DataTable(source=source_table, columns=source_columns, height=500, width=1000)
     combined_callback_code = """
-    var data = source.data;
+    var data = dataprocessing.data;
     var original_data = original_source.data;
     var date = date_select_obj.value;
     var save_date = save_date_select_obj.value;
@@ -395,7 +395,7 @@ def create_data_table(pandas_table):
         }
     }
 
-    source.change.emit();
+    dataprocessing.change.emit();
     target_obj.change.emit();
     """
 

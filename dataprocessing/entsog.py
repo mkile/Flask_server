@@ -8,7 +8,7 @@ from io import StringIO
 from dateutil.parser import parse
 from pandas import DataFrame, merge
 
-from source.common import filter_df, add_html_line, turn_date, round_half_up, \
+from dataprocessing.common import filter_df, add_html_line, turn_date, round_half_up, \
     add_table_row, getandprocessJSONdataENTSOG, ERROR_MSG
 
 # Данные

@@ -5,9 +5,9 @@ from datetime import datetime, timedelta
 
 from pandas import DataFrame
 
-import source.common as tpc
-from source.common import DATA_DEPTH
-from source.db_works import connect_to_db, disconnect_from_db, load_data, save_all_data
+import dataprocessing.common as tpc
+from dataprocessing.common import DATA_DEPTH
+from dataprocessing.db_works import connect_to_db, disconnect_from_db, load_data, save_all_data
 
 DEFAULT_LINK = 'https://transparency.entsog.eu/api/v1/operationalData.csv?forceDownload=true&' \
                'delimiter=comma&from={}&to={}&indicator=' \
