@@ -40,6 +40,7 @@ def turn_date(date):
 
 
 def round_half_up(number, decimals=0):
+    # tested
     multiplier = 10 ** decimals
     return floor(number * multiplier + 0.5) / multiplier
 

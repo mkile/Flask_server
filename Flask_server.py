@@ -15,7 +15,7 @@ from waitress import serve
 from werkzeug.exceptions import HTTPException
 
 from dataprocessing.db_works import check_n_create_data_tables
-from dataprocessing.email_sender import process_message
+# from dataprocessing.email_sender import process_message
 from dataprocessing.entsog import get_ENTSOG_vr_data
 from dataprocessing.entsog_map import plot_ENTSOG_map, plot_ENTSOG_table, create_data_table
 from dataprocessing.fgsz import get_FGSZ_vr_data
