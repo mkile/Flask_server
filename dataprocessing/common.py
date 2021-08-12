@@ -1,11 +1,12 @@
 """
 Basic procedures used in multiple places
 """
-from io import BytesIO
+from io import BytesIO, StringIO
 from math import floor
 
 from pandas import read_csv, DataFrame
 from requests import get
+import json
 
 # Константы
 ERROR_MSG = '#error#'
@@ -48,8 +49,8 @@ def round_half_up(number, decimals=0):
 def getandprocessJSONdataENTSOG(link):
     # get data from internet and process json with it
     response = executeRequest(link)
-    if response != ERROR_MSG:
-        return getJSONdataENTSOG(response)
+    if response is not None:
+        return get_json_data_entsog(response)
     return None
 
 
@@ -59,18 +60,19 @@ def executeRequest(link):
         print('Getting data from link: ', link)
         response = get(link)
         if response.status_code != 200:
-            return ERROR_MSG
+            return None
         print('Data recieved.')
-        return response.json()
+        return response.content
     except Exception as error:
         print('Error getting data from server ', error)
-        return ERROR_MSG
+        return None
 
 
-def getJSONdataENTSOG(response):
+def get_json_data_entsog(response):
     # load entsog data and return pandas dataframe
     indicator = ''
     try:
+        response = json.loads(response)
         result = list()
         for js_element in response['operationalData']:
             line = list()
@@ -80,19 +82,17 @@ def getJSONdataENTSOG(response):
             if indicator == '':
                 indicator = js_element['indicator']
             result.append(line)
-        field = FIELDS.copy()
-        field.append(indicator)
-        return DataFrame(result, columns=field)
+        return DataFrame(result, columns=FIELDS.append(indicator))
     except Exception as error:
         print("Error getting data from json ", error)
         print(response)
-        return ''
+        return
 
 
 def get_excel_data(link):
     try:
         with BytesIO(executeRequest(link).content) as csvfile:
-            return read_csv(csvfile)
+            return read_csv(csvfile, encoding='utf-8-sig')
     except Exception as error:
         print('Got error during processing link data ({}), error {}'.format(link, error))
         return DataFrame()
