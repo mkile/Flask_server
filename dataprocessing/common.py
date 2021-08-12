@@ -16,7 +16,11 @@ DATA_DEPTH = 30
 
 def filter_df(data, filter_value, field):
     # Filter data by filter and return needed field
-    result = data.loc[data[field] == filter_value]
+    try:
+        result = data.loc[data[field] == filter_value]
+    except Exception as error:
+        print(__name__ + '.filter_df: failed to filter dataframe ({}), error {}'.format(data.head(), error))
+        result = data
     return result
 
 
@@ -46,25 +50,25 @@ def round_half_up(number, decimals=0):
     return floor(number * multiplier + 0.5) / multiplier
 
 
-def getandprocessJSONdataENTSOG(link):
+def get_and_process_json_data_entsog(link):
     # get data from internet and process json with it
-    response = executeRequest(link)
+    response = execute_request(link)
     if response is not None:
         return get_json_data_entsog(response)
     return None
 
 
-def executeRequest(link):
+def execute_request(link):
     # get data with request
     try:
-        print('Getting data from link: ', link)
+        print(__name__ + '.execute_request: Getting data from link: ', link)
         response = get(link)
         if response.status_code != 200:
             return None
         print('Data recieved.')
         return response.content
     except Exception as error:
-        print('Error getting data from server ', error)
+        print(__name__ + '.execute_request: Error getting data from server ', error)
         return None
 
 
@@ -84,17 +88,18 @@ def get_json_data_entsog(response):
             result.append(line)
         return DataFrame(result, columns=FIELDS.append(indicator))
     except Exception as error:
-        print("Error getting data from json ", error)
+        print(__name__ + ".get_json_data_entsog: Error getting data from json ", error)
         print(response)
         return
 
 
 def get_excel_data(link):
+    """ Получение csv файла по переданной ссылке и возврат DataFrame"""
     try:
-        with BytesIO(executeRequest(link).content) as csvfile:
+        with BytesIO(execute_request(link)) as csvfile:
             return read_csv(csvfile, encoding='utf-8-sig')
     except Exception as error:
-        print('Got error during processing link data ({}), error {}'.format(link, error))
+        print(__name__ + '.get_excel_data: error during data ({}), error {}'.format(link, error))
         return DataFrame()
 
 

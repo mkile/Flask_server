@@ -5,8 +5,7 @@ from datetime import datetime, timedelta
 
 from pandas import DataFrame
 
-import dataprocessing.common as tpc
-from dataprocessing.common import DATA_DEPTH
+from dataprocessing.common import get_excel_data, DATA_DEPTH
 from dataprocessing.db_works import connect_to_db, disconnect_from_db, load_data, save_all_data
 
 DEFAULT_LINK = 'https://transparency.entsog.eu/api/v1/operationalData.csv?forceDownload=true&' \
@@ -15,37 +14,38 @@ DEFAULT_LINK = 'https://transparency.entsog.eu/api/v1/operationalData.csv?forceD
                'timezone=CET&periodize=0&limit=-1&isTransportData=true&dataset=1'
 
 
-def collect_new_ENTSOG_data(columns):
+def collect_new_entsog_data(columns, data_depth):
+    """Получение данных из ENTSOG за период указанный в common.DATADEPTH"""
     datatable = DataFrame()
     # Сместим текущую дату от текущей на 1 день, так как сравниваем с загруженными вчера данными
     today = datetime.now() - timedelta(days=1)
-    for currDay in range(0, DATA_DEPTH):
+    for currDay in range(0, data_depth):
         start_date = (today - timedelta(days=currDay + 1)).strftime('%Y-%m-%d')
         end_date = (today - timedelta(days=currDay)).strftime('%Y-%m-%d')
         link = DEFAULT_LINK.format(start_date, end_date)
-        datatable = datatable.append(tpc.get_excel_data(link)[columns])
-    print('All data collected.')
+        datatable = datatable.append(get_excel_data(link)[columns])
+    print(__name__ + '.collect_new_entsog_data: All data collected.')
     return datatable
 
 
 def collect_and_compare_data(path_to_db, today):
-    columns = ['periodFrom', 'indicator', 'pointKey', 'operatorKey', 'directionKey', 'lastUpdateDateTime']
+    COLUMNS = ['periodFrom', 'indicator', 'pointKey', 'operatorKey', 'directionKey', 'lastUpdateDateTime']
     # types = ['string', 'string', 'string', 'string', 'string', 'string']
-    # dtype = {name_: type_ for name_ in columns for type_ in types}
-    new_data = collect_new_ENTSOG_data(columns)
+    # dtype = {name_: type_ for name_ in COLUMNS for type_ in types}
+    new_data = collect_new_entsog_data(COLUMNS, DATA_DEPTH)
     new_data = new_data.drop_duplicates()
-    dates = new_data[columns[0]].drop_duplicates().tolist()
+    dates = new_data[COLUMNS[0]].drop_duplicates().tolist()
     dates.sort()
     connection = connect_to_db(path_to_db)
     # Check if connection was successfully established
     if isinstance(connection, tuple):
         return connection
-    updated_data = DataFrame(columns=columns)
+    updated_data = DataFrame(columns=COLUMNS)
     # new_data.to_csv('xls/new_data_all.csv')
     for date in dates:
-        old_data = DataFrame(load_data(connection, date), columns=columns)
+        old_data = DataFrame(load_data(connection, date), columns=COLUMNS)
         # old_data.to_excel('xls/old_data {}.xls'.format(date.replace(':', '')))
-        test_data = new_data[new_data[columns[0]].str.contains(date)]
+        test_data = new_data[new_data[COLUMNS[0]].str.contains(date)]
         changed_data = test_data.append(old_data).drop_duplicates(keep=False)
         if len(changed_data) > 0:
             updated_data = updated_data.append(changed_data)

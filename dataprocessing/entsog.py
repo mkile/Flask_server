@@ -9,7 +9,7 @@ from dateutil.parser import parse
 from pandas import DataFrame, merge
 
 from dataprocessing.common import filter_df, add_html_line, turn_date, round_half_up, \
-    add_table_row, getandprocessJSONdataENTSOG, ERROR_MSG
+    add_table_row, get_and_process_json_data_entsog, ERROR_MSG
 
 # Данные
 SUFFIXES = ['V', 'G']
@@ -42,7 +42,7 @@ def get_ENTSOG_vr_data(settings, email=False):
     for point in points_list:
         link = LINK_TEMPLATE.format(point, date_from, date_to, INDICATOR_LIST[0])
         stringio.write(link + br)
-        aldata = aldata.append(getandprocessJSONdataENTSOG(link))
+        aldata = aldata.append(get_and_process_json_data_entsog(link))
     if len(aldata) == 0:
         stringio.write('Данных по аллокациям в ENTSOG нет.')
     else:
@@ -53,7 +53,7 @@ def get_ENTSOG_vr_data(settings, email=False):
     for point in points_list:
         link = LINK_TEMPLATE.format(point, date_from, date_to, INDICATOR_LIST[1])
         stringio.write(link + br)
-        gcv_data = gcv_data.append(getandprocessJSONdataENTSOG(link))
+        gcv_data = gcv_data.append(get_and_process_json_data_entsog(link))
     gcv_data = gcv_data.sort_values('date')
     # Renomination Data Receive
     stringio.write(br + f"Getting {INDICATOR_LIST[2]} data for {str(date_from)}" + br)
@@ -61,7 +61,7 @@ def get_ENTSOG_vr_data(settings, email=False):
     for point in points_list:
         link = LINK_TEMPLATE.format(point, date_from, date_to, INDICATOR_LIST[2])
         stringio.write(link + br)
-        ren_data = ren_data.append(getandprocessJSONdataENTSOG(link))
+        ren_data = ren_data.append(get_and_process_json_data_entsog(link))
     ren_data = ren_data.sort_values('date')
     # Output collected data separately
     stringio.write('</textarea>')
@@ -189,8 +189,8 @@ def get_and_send_GCV_data():
     link2 = 'https://transparency.entsog.eu/api/v1/operationalData?forceDownload=' \
             'true&pointDirection=sk-tso-0001itp-00117entry&from=' + date1 + '&to=' \
             + date2 + '&indicator=GCV&periodType=day&timezone=CET&limit=10&dataset=1'
-    res1 = getandprocessJSONdataENTSOG(link1)
-    res2 = getandprocessJSONdataENTSOG(link2)
+    res1 = get_and_process_json_data_entsog(link1)
+    res2 = get_and_process_json_data_entsog(link2)
     try:
         if len(res1) > 0:
             message = 'Kondratki: ' + str(res1[1]) + ' :' + str(res1[0])
