@@ -78,22 +78,22 @@ def get_json_data_entsog(response):
     try:
         response = json.loads(response)
         result = list()
-        for js_element in response['operationalData']:
+        for json_element in response['operationalData']:
             line = list()
-            line.append(js_element['periodFrom'])
-            line.append(js_element['pointLabel'])
-            line.append(js_element['value'])
+            line.append(json_element['periodFrom'])
+            line.append(json_element['pointLabel'])
+            line.append(json_element['value'])
             if indicator == '':
-                indicator = js_element['indicator']
+                indicator = json_element['indicator']
             result.append(line)
-        return DataFrame(result, columns=FIELDS.append(indicator))
+        return DataFrame(result, columns=FIELDS + [indicator])
     except Exception as error:
         print(__name__ + ".get_json_data_entsog: Error getting data from json ", error)
         print(response)
         return
 
 
-def get_excel_data(link):
+def get_and_process_csv_data(link):
     """ Получение csv файла по переданной ссылке и возврат DataFrame"""
     try:
         with BytesIO(execute_request(link)) as csvfile:
@@ -104,7 +104,7 @@ def get_excel_data(link):
 
 
 if __name__ == "__main__":
-    x = get_excel_data('https://transparency.entsog.eu/api/v1/operationalData.csv?forceDownload=true&'
+    x = get_and_process_csv_data('https://transparency.entsog.eu/api/v1/operationalData.csv?forceDownload=true&'
                        'delimiter=comma&from=2020-09-18&to=2020-09-23&indicator='
                        'Nomination,Renomination,Allocation,Physical%20Flow,GCV&periodType=day&'
                        'timezone=CET&periodize=0&limit=-1&isTransportData=true&dataset=1')

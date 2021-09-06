@@ -15,7 +15,7 @@ points_link = 'https://transparency.entsog.eu/api/v1/Interconnections?limit=-1'
 operators_link = 'https://transparency.entsog.eu/api/v1/operators'
 
 
-def prepare_BZ_outlines(full_points_list):
+def prepare_balance_zones_outlines(full_points_list):
     # Нарисовать контуры описывающие все точки входящие в БЗ
     bz_list = full_points_list['toBzKey']
     bz_list.append(full_points_list['fromBzKey'].rename('toBzKey'))
@@ -93,7 +93,7 @@ def plot_dataframe_coords(coords, name):
     file.close()
 
 
-def plot_ENTSOG_map():
+def plot_entsog_map():
     def r():
         return random.randint(0, 255)
 
@@ -120,7 +120,7 @@ def plot_ENTSOG_map():
     pdagr = pdagr.drop_duplicates()
     # Make balance_zones_outline
     pdbz_temp = pdbz.rename(columns={'tpMapX': 'pointTpMapX', 'tpMapY': 'pointTpMapY', 'bzKey': 'fromBzKey'})
-    outlines = prepare_BZ_outlines(pdagr.append(pdbz_temp[['name', 'pointTpMapX', 'pointTpMapY', 'fromBzKey']]))
+    outlines = prepare_balance_zones_outlines(pdagr.append(pdbz_temp[['name', 'pointTpMapX', 'pointTpMapY', 'fromBzKey']]))
     del pdbz_temp
     # Move duplicating endpoints up 0.005
     # Need to remove 'normal' points having only entry exit and not ovelapping
@@ -282,7 +282,7 @@ def plot_ENTSOG_map():
     return dumps(json_item(layout, "myplot"))
 
 
-def plot_ENTSOG_table():
+def plot_entsog_table():
     # Создание таблиц БЗ и пунктов Bokeh
     pdbz = DataFrame(get(bz_link).json()['balancingzones'])
     pdbz = pdbz.drop_duplicates().fillna('-')
@@ -464,4 +464,4 @@ def create_data_table(pandas_table):
 
 
 if __name__ == "__main__":
-    plot_ENTSOG_map()
+    plot_entsog_map()

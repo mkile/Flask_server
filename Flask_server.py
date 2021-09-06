@@ -16,9 +16,9 @@ from werkzeug.exceptions import HTTPException
 
 from dataprocessing.db_works import check_n_create_data_tables
 # from dataprocessing.email_sender import process_message
-from dataprocessing.entsog import get_ENTSOG_vr_data
-from dataprocessing.entsog_map import plot_ENTSOG_map, plot_ENTSOG_table, create_data_table
-from dataprocessing.fgsz import get_FGSZ_vr_data
+from dataprocessing.entsog import get_entsog_vr_data
+from dataprocessing.entsog_map import plot_entsog_map, plot_entsog_table, create_data_table
+from dataprocessing.fgsz import get_fgsz_vr_data
 from dataprocessing.update_checker import collect_and_compare_data, get_updated_data
 
 app = Flask(__name__)
@@ -73,7 +73,7 @@ def entsog_page():
     if not session.get('logged_in'):
         return render_template('login.html')
     return render_template('data.html', title='Данные по виртуальному реверсу из ENTSOG',
-                           vr_data=get_ENTSOG_vr_data(load_settings('points')),
+                           vr_data=get_entsog_vr_data(load_settings('points')),
                            updated=get_updated(),
                            sent_date=load_settings('last_send_date'))
 
@@ -89,14 +89,14 @@ def entsog_gis():
 def entsog_gis_plot():
     if not session.get('logged_in'):
         return render_template('login.html')
-    return plot_ENTSOG_map()
+    return plot_entsog_map()
 
 
 @app.route('/gis_data_table')
 def entsog_table_plot():
     if not session.get('logged_in'):
         return render_template('login.html')
-    return plot_ENTSOG_table()
+    return plot_entsog_table()
 
 
 @app.route('/changed_data')
@@ -113,7 +113,7 @@ def fgsz_page():
         return render_template('login.html')
     today = datetime.now().strftime('%Y-%m-%d')
     if request.method == 'GET':
-        data = get_FGSZ_vr_data()
+        data = get_fgsz_vr_data()
         return render_template('data.html',
                                title='Данные по виртуальному реверсу с сайта FGSZ',
                                vr_data=data,
@@ -126,7 +126,7 @@ def fgsz_page():
         start_date = request.form['start_date']
         end_date = request.form['end_date']
         if 'xls' in request.form['action']:
-            data = get_FGSZ_vr_data(start_date, end_date, True)
+            data = get_fgsz_vr_data(start_date, end_date, True)
             if data[2] == '#error#':
                 return render_template('data.html',
                                        title='Данные по виртуальному реверсу с сайта FGSZ',
@@ -145,7 +145,7 @@ def fgsz_page():
                                            "vnd.openxmlformats-officedocument.spreadsheetml.sheet"
             return resp
         else:
-            data = get_FGSZ_vr_data(start_date, end_date)
+            data = get_fgsz_vr_data(start_date, end_date)
             return render_template('data.html',
                                    title='Данные с сайта FGSZ за период',
                                    need_dynamic=True,
@@ -187,7 +187,7 @@ def check_time_and_send_email():
         print(last_send_date)
         return
     if last_send_date != str(now.strftime('%d.%m.%Y')) and now.hour >= 17:
-        message = get_ENTSOG_vr_data(load_settings('points'), email=True)
+        message = get_entsog_vr_data(load_settings('points'), email=True)
         message += load_settings('message_ps')
         if len(message) > 0:
             if process_message(message, load_settings('sender_email'), load_settings('reciever_email')):

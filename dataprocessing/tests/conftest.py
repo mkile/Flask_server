@@ -6,11 +6,12 @@ import pytest
 
 myPath = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, myPath + '/../')
-DB_PATH = 'data/test_data.db'
+DB_PATH = '../../data/test_data.db'
 
 
 @pytest.fixture(scope="module")
 def connection():
+    # Database connection for testing
     print(DB_PATH)
     conn = connect(DB_PATH)
     yield conn

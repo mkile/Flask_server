@@ -5,7 +5,7 @@ from datetime import datetime, timedelta
 
 from pandas import DataFrame
 
-from dataprocessing.common import get_excel_data, DATA_DEPTH
+from dataprocessing.common import get_and_process_csv_data, DATA_DEPTH
 from dataprocessing.db_works import connect_to_db, disconnect_from_db, load_data, save_all_data
 
 DEFAULT_LINK = 'https://transparency.entsog.eu/api/v1/operationalData.csv?forceDownload=true&' \
@@ -23,7 +23,7 @@ def collect_new_entsog_data(columns, data_depth):
         start_date = (today - timedelta(days=currDay + 1)).strftime('%Y-%m-%d')
         end_date = (today - timedelta(days=currDay)).strftime('%Y-%m-%d')
         link = DEFAULT_LINK.format(start_date, end_date)
-        datatable = datatable.append(get_excel_data(link)[columns])
+        datatable = datatable.append(get_and_process_csv_data(link)[columns])
     print(__name__ + '.collect_new_entsog_data: All data collected.')
     return datatable
 

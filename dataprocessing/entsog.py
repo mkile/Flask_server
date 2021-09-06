@@ -18,7 +18,7 @@ LINK_TEMPLATE = 'https://transparency.entsog.eu/api/v1/operationalData?periodTyp
 INDICATOR_LIST = ['Allocation', 'GCV', 'Renomination']
 
 
-def get_ENTSOG_vr_data(settings, email=False):
+def get_entsog_vr_data(settings, email=False):
     # Timedelta for dates
     delta = 4
     # List of points for reverse calculation
@@ -178,7 +178,7 @@ def get_ENTSOG_vr_data(settings, email=False):
 
 
 # This one is obsolete
-def get_and_send_GCV_data():
+def get_and_send_gcv_data():
     # Если время отправки калорийности наступило
     date1 = (datetime(datetime.now.year, datetime.now.month, datetime.now.day) - timedelta(days=2)).strftime('%Y-%m-%d')
     date2 = (datetime(datetime.now.year, datetime.now.month, datetime.now.day)).strftime('%Y-%m-%d')
@@ -217,4 +217,4 @@ def get_and_send_GCV_data():
 
 
 if __name__ == "__main__":
-    get_ENTSOG_vr_data(['sk-tso-0001itp-00421exit'])
+    get_entsog_vr_data(['sk-tso-0001itp-00421exit'])
