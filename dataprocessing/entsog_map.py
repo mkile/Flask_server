@@ -6,7 +6,7 @@ from bokeh.layouts import column, row
 from bokeh.models import ColumnDataSource, DataTable, CustomJS, CheckboxGroup, TableColumn, Div, Select
 from bokeh.models.tools import HoverTool
 from bokeh.plotting import figure
-from pandas import DataFrame, merge
+from pandas import DataFrame, merge, concat
 from requests import get
 from scipy.spatial import ConvexHull
 
@@ -18,12 +18,14 @@ operators_link = 'https://transparency.entsog.eu/api/v1/operators'
 def prepare_balance_zones_outlines(full_points_list):
     # Нарисовать контуры описывающие все точки входящие в БЗ
     bz_list = full_points_list['toBzKey']
-    bz_list.append(full_points_list['fromBzKey'].rename('toBzKey'))
+    bz_list = concat([bz_list, full_points_list['fromBzKey'].rename('toBzKey')])
+    # bz_list.append(full_points_list['fromBzKey'].rename('toBzKey'))
     bz_list = bz_list.drop_duplicates().dropna().to_list()
     result = []
     for bz in bz_list:
         bz_points = full_points_list[full_points_list['toBzKey'] == bz]
-        bz_points = bz_points.append(full_points_list[full_points_list['fromBzKey'] == bz])
+        bz_points = concat([bz_points, full_points_list[full_points_list['fromBzKey'] == bz]])
+        # bz_points = bz_points.append(full_points_list[full_points_list['fromBzKey'] == bz])
         bz_points = bz_points.drop_duplicates(['pointTpMapX', 'pointTpMapY'])
         xs = bz_points['pointTpMapX'].to_list()
         ys = bz_points['pointTpMapY'].to_list()
@@ -120,7 +122,7 @@ def plot_entsog_map():
     pdagr = pdagr.drop_duplicates()
     # Make balance_zones_outline
     pdbz_temp = pdbz.rename(columns={'tpMapX': 'pointTpMapX', 'tpMapY': 'pointTpMapY', 'bzKey': 'fromBzKey'})
-    outlines = prepare_balance_zones_outlines(pdagr.append(pdbz_temp[['name', 'pointTpMapX', 'pointTpMapY', 'fromBzKey']]))
+    outlines = prepare_balance_zones_outlines(concat([pdagr, pdbz_temp[['name', 'pointTpMapX', 'pointTpMapY', 'fromBzKey']]]))
     del pdbz_temp
     # Move duplicating endpoints up 0.005
     # Need to remove 'normal' points having only entry exit and not ovelapping
@@ -145,7 +147,7 @@ def plot_entsog_map():
         coords_after[1] = duplicates_only.at[index, 'pointTpMapY']
         prev_name = row_['name']
 
-    pdagr = wo_duplicates.append(duplicates_only)
+    pdagr = concat([wo_duplicates, duplicates_only])
 
     # Create data for lines from BZ
     joined = pdagr.merge(pdbz, left_on='fromBzKey', right_on='bzKey')
@@ -205,7 +207,7 @@ def plot_entsog_map():
     # Create checboxes
     checkboxes = CheckboxGroup(labels=bz_list, active=list(range(len(bz_list))))
     callback = CustomJS(code=code, args=args)
-    checkboxes.js_on_click(callback)
+    checkboxes.js_on_change('change:active', callback)
 
     # lines to bz
     from_x0 = lines_to['pointTpMapX'].tolist()
@@ -444,7 +446,7 @@ def create_data_table(pandas_table):
                           how='outer')['Counts'].fillna(0).astype('int32').tolist() for y in indicators}
     plot_data['x'] = dates
 
-    plot = figure(x_range=dates, plot_height=400, plot_width=800,
+    plot = figure(x_range=dates, height=400, width=800,
                   title="Количество изменений по суткам",
                   toolbar_location=None, tools="hover", tooltips="$name: @$name")
     plot.vbar_stack(indicators, width=0.9, x='x', source=plot_data,
